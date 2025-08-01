@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Simple Element Checker",
+  "version": "1.0",
+  "description": "Checks for a specific element on the page and logs to the console.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.typingmind.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}

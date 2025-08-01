@@ -13,7 +13,15 @@
 	// Your code here...
 
 	// --- Configuration ---
-	const BuyModalSelector = '[id*="headlessui-dialog-panel"]'
+	const BuyModalSelector = `div[data-element-id=pop-up-modal]
+		:not(
+			:has(
+				> div > div > div > form > input[data-element-id=plugin-url-input]
+			),
+			:has(
+				> div > div > div > div > div.flex:has(> button:nth-of-type(2))
+			)
+	)`
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
 	const SaveJsonButtonId = "save-json-button"
@@ -152,7 +160,9 @@
 				const buyModal = node.matches(BuyModalSelector) ? node : node.querySelector(BuyModalSelector)
 				if (buyModal) {
 					console.log("Extension: Upgrade modal detected. Closing it.")
-					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
+					setTimeout(() => {
+						document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
+					}, 250)
 				}
 			}
 		}

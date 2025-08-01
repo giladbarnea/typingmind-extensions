@@ -63,7 +63,7 @@
 			return
 		}
 
-		console.log('Safari Extension: Button container found. Adding "Save" button.')
+		console.log('Extension: Button container found. Adding "Save" button.')
 
 		const saveButton = document.createElement("button")
 		saveButton.id = SaveJsonButtonId
@@ -123,7 +123,7 @@
 	}
 
 	// --- Main Logic ---
-	console.log("Safari Extension: Content script loaded and observing DOM.")
+	console.log("Extension: Content script loaded and observing DOM.")
 
 	// This observer handles adding our custom button when its container appears.
 	const buttonObserver = new MutationObserver((mutations, obs) => {
@@ -144,14 +144,14 @@
 				// Check for the buy button
 				const buyButton = node.matches(BuyButtonSelector) ? node : node.querySelector(BuyButtonSelector)
 				if (buyButton) {
-					console.log("Safari Extension: Buy button detected. Removing it.")
+					console.log("Extension: Buy button detected. Removing it.")
 					buyButton.remove()
 				}
 
 				// Check for the buy modal
 				const buyModal = node.matches(BuyModalSelector) ? node : node.querySelector(BuyModalSelector)
 				if (buyModal) {
-					console.log("Safari Extension: Upgrade modal detected. Closing it.")
+					console.log("Extension: Upgrade modal detected. Closing it.")
 					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
 				}
 			}
@@ -164,15 +164,30 @@
 		const style = document.createElement("style")
 		style.textContent = `
   /* --- Chat Styles --- */
-  @import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000');
-
   
   main {
-    font-family: "Roboto Flex", sans-serif;
-    line-height: 26px;
+    font-family: "Google Sans Display", sans-serif;
+    line-height: 28px;
+    font-size: 16px;
+    background-color: #1B1C1D;
+    color: white;
   }
   code, kbd, pre, samp {
     font-family: "Fira Code Nerd Font", monospace;
+  }
+  code.inline, kbd.inline, pre.inline, samp.inline {
+    background-color: rgba(194, 192, 182, 0.05) !important;
+    border-color: rgba(222, 220, 209, 0.15) !important;
+    border-style: solid;
+    border-width: 0.5px !important;
+    color: rgb(232, 107, 107);
+  }
+    
+  div[data-element-id="sidebar-middle-part"]{
+    background-color: #282A2C;
+    color: rgb(211, 227, 253);
+    font-size: 14px;
+
   }
   `
 		document.head.appendChild(style)

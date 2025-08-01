@@ -4,7 +4,7 @@
 // @version      2025-08-01
 // @description  Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
 // @author       You
-// @match        https://typingmind.com/*
+// @match        https://www.typingmind.com/*
 // @icon         https://www.typingmind.com/favicon-192x192.png
 // @grant        none
 // ==/UserScript==
@@ -166,49 +166,13 @@
   /* --- Chat Styles --- */
   @import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000');
 
-  @font-face {
-    font-family: "Fira Code Nerd Font";
-    font-style: normal;
-    font-weight: 100;
-    src: url('https://github.com/ryanoasis/nerd-fonts/raw/refs/heads/master/patched-fonts/FiraCode/Light/FiraCodeNerdFont-Light.ttf') format('truetype');
-  }
-  @font-face {
-      font-family: "Fira Code Nerd Font";
-      font-style: normal;
-      font-weight: 200;
-      src: url('https://github.com/ryanoasis/nerd-fonts/raw/refs/heads/master/patched-fonts/FiraCode/Light/FiraCodeNerdFont-Light.ttf') format('truetype');
-  }
-  @font-face {
-    font-family: "Fira Code Nerd Font";
-    font-style: normal;
-    font-weight: 300;
-    src: url('https://github.com/ryanoasis/nerd-fonts/raw/refs/heads/master/patched-fonts/FiraCode/Regular/FiraCodeNerdFont-Regular.ttf') format('truetype');
-  }
-  @font-face {
-    font-family: "Fira Code Nerd Font";
-    font-style: normal;
-    font-weight: 400;
-    src: url('https://github.com/ryanoasis/nerd-fonts/raw/refs/heads/master/patched-fonts/FiraCode/Regular/FiraCodeNerdFont-Regular.ttf') format('truetype');
-  }
-  @font-face {
-    font-family: "GoogleSans-Display-Regular";
-    src: url('https://github.com/mobiledesres/Google-Sans-web-fonts/raw/refs/heads/main/TTF/Google%20Sans%20Display/GoogleSansDisplay-Regular.ttf') format('truetype');
-  }
-  @font-face {
-    font-family: "GoogleSans-Text-Regular";
-    src: url('https://github.com/mobiledesres/Google-Sans-web-fonts/raw/refs/heads/main/TTF/Google%20Sans%20Text/GoogleSansText-Regular.ttf') format('truetype');
-  }
-  @font-face {
-    font-family: "GoogleSans-Regular";
-    src: url('https://github.com/mobiledesres/Google-Sans-web-fonts/blob/main/TTF/Google%20Sans/GoogleSans-Regular.ttf') format('truetype');
-  }
   
   main {
-    font-family: "GoogleSans-Display-Regular", "Times New Roman", sans-serif;
+    font-family: "Roboto Flex", sans-serif;
     line-height: 26px;
   }
   code, kbd, pre, samp {
-    font-family: "Fira Code Nerd Font", "Times New Roman", monospace;
+    font-family: "Fira Code Nerd Font", monospace;
   }
   `
 		document.head.appendChild(style)

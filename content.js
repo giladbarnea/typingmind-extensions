@@ -9,159 +9,160 @@
 // @grant        none
 // ==/UserScript==
 
-// --- Configuration ---
-const BUY_MODAL_SELECTOR = '[id*="headlessui-dialog-panel"]';
-const BUY_BUTTON_SELECTOR = 'button#nav-buy-button';
-const BUTTON_CONTAINER_SELECTOR = 'div[data-element-id="current-chat-title"] > div';
-const SAVE_JSON_BUTTON_ID = 'save-json-button';
+;(function () {
+	// Your code here...
 
-// --- IndexedDB Configuration ---
-const DB_NAME = 'keyval-store';
-const STORE_NAME = 'keyval';
+	// --- Configuration ---
+	const BuyModalSelector = '[id*="headlessui-dialog-panel"]'
+	const BuyButtonSelector = "button#nav-buy-button"
+	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
+	const SaveJsonButtonId = "save-json-button"
 
-// --- Utility Functions ---
-function getFromIndexedDb(dbName, storeName, key) {
-  return new Promise((resolve, reject) => {
-    const request = window.indexedDB.open(dbName);
-    request.onerror = () => reject(new Error(`Failed to open IndexedDB: ${dbName}`));
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(storeName)) {
-        return reject(new Error(`Store "${storeName}" not found in DB "${dbName}"`));
-      }
-      const transaction = db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const getRequest = store.get(key);
-      getRequest.onsuccess = () => resolve(getRequest.result);
-      getRequest.onerror = () => reject(new Error(`Failed to retrieve data from store: ${storeName}`));
-    };
-    request.onupgradeneeded = () => console.warn("Database upgrade needed or creation started.");
-  });
-}
+	// --- IndexedDB Configuration ---
+	const DbName = "keyval-store"
+	const StoreName = "keyval"
 
-function triggerDownload(filename, data) {
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
+	// --- Utility Functions ---
+	function getFromIndexedDb(dbName, storeName, key) {
+		return new Promise((resolve, reject) => {
+			const request = window.indexedDB.open(dbName)
+			request.onerror = () => reject(new Error(`Failed to open IndexedDB: ${dbName}`))
+			request.onsuccess = (event) => {
+				const db = event.target.result
+				if (!db.objectStoreNames.contains(storeName)) {
+					return reject(new Error(`Store "${storeName}" not found in DB "${dbName}"`))
+				}
+				const transaction = db.transaction([storeName], "readonly")
+				const store = transaction.objectStore(storeName)
+				const getRequest = store.get(key)
+				getRequest.onsuccess = () => resolve(getRequest.result)
+				getRequest.onerror = () => reject(new Error(`Failed to retrieve data from store: ${storeName}`))
+			}
+			request.onupgradeneeded = () => console.warn("Database upgrade needed or creation started.")
+		})
+	}
 
-/**
- * Creates and injects the "Save Chat" button into the DOM.
- */
-function addSaveButton() {
-  const buttonContainer = document.querySelector(BUTTON_CONTAINER_SELECTOR);
-  if (!buttonContainer || document.getElementById(SAVE_JSON_BUTTON_ID)) {
-    return;
-  }
+	function triggerDownload(filename, data) {
+		const blob = new Blob([data], { type: "application/json" })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement("a")
+		a.href = url
+		a.download = filename
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		URL.revokeObjectURL(url)
+	}
 
-  console.log('Safari Extension: Button container found. Adding "Save" button.');
+	/**
+	 * Creates and injects the "Save Chat" button into the DOM.
+	 */
+	function addSaveButton() {
+		const buttonContainer = document.querySelector(ButtonContainerSelector)
+		if (!buttonContainer || document.getElementById(SaveJsonButtonId)) {
+			return
+		}
 
-  const saveButton = document.createElement('button');
-  saveButton.id = SAVE_JSON_BUTTON_ID;
-  saveButton.className = "w-9 justify-center dark:hover:bg-white/20 dark:active:bg-white/25 dark:disabled:text-neutral-500 hover:bg-slate-900/20 active:bg-slate-900/25 disabled:text-neutral-400 focus-visible:outline-offset-2 focus-visible:outline-slate-500 text-slate-900 dark:text-white inline-flex items-center rounded-lg h-9 transition-all group font-semibold text-xs";
-  saveButton.setAttribute('data-tooltip-id', 'global');
-  saveButton.setAttribute('data-tooltip-content', 'Save Chat as JSON');
-  
-  const saveIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  saveIcon.setAttribute('class', 'w-[18px] h-[18px]');
-  saveIcon.setAttribute('viewBox', '0 0 24 24');
-  saveIcon.setAttribute('fill', 'none');
-  saveIcon.setAttribute('stroke', 'currentColor');
-  saveIcon.setAttribute('stroke-width', '1.5');
-  saveIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />`;
-  saveButton.appendChild(saveIcon);
+		console.log('Safari Extension: Button container found. Adding "Save" button.')
 
-  saveButton.addEventListener('click', async () => {
-    const url = window.location.href;
-    const match = url.match(/#chat=([^&]+)/);
-    if (!match) {
-      alert('Could not find a chat ID in the URL.');
-      return;
-    }
-    const chatId = match[1];
-    
-    console.log(`Attempting to fetch chat "${chatId}" to save it...`);
-    try {
-      const value = await getFromIndexedDb(DB_NAME, STORE_NAME, `CHAT_${chatId}`);
-      if (value === undefined) {
-        alert(`No value found for key: "CHAT_${chatId}"`);
-        return;
-      }
-      
-      console.log('SUCCESS: Found value. Triggering download...');
-      const jsonString = JSON.stringify(value, null, 2);
+		const saveButton = document.createElement("button")
+		saveButton.id = SaveJsonButtonId
+		saveButton.className =
+			"w-9 justify-center dark:hover:bg-white/20 dark:active:bg-white/25 dark:disabled:text-neutral-500 hover:bg-slate-900/20 active:bg-slate-900/25 disabled:text-neutral-400 focus-visible:outline-offset-2 focus-visible:outline-slate-500 text-slate-900 dark:text-white inline-flex items-center rounded-lg h-9 transition-all group font-semibold text-xs"
+		saveButton.setAttribute("data-tooltip-id", "global")
+		saveButton.setAttribute("data-tooltip-content", "Save Chat as JSON")
 
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const day = now.getDate().toString().padStart(2, '0');
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const seconds = now.getSeconds().toString().padStart(2, '0');
-      
-      const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-      const filename = `${timestamp}-${chatId}.json`;
-      
-      triggerDownload(filename, jsonString);
+		const saveIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+		saveIcon.setAttribute("class", "w-[18px] h-[18px]")
+		saveIcon.setAttribute("viewBox", "0 0 24 24")
+		saveIcon.setAttribute("fill", "none")
+		saveIcon.setAttribute("stroke", "currentColor")
+		saveIcon.setAttribute("stroke-width", "1.5")
+		saveIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />`
+		saveButton.appendChild(saveIcon)
 
-    } catch (error) {
-      console.error('ERROR: Failed to access IndexedDB.', error);
-      alert('Error accessing IndexedDB. See console for details.');
-    }
-  });
+		saveButton.addEventListener("click", async () => {
+			const url = window.location.href
+			const match = url.match(/#chat=([^&]+)/)
+			if (!match) {
+				alert("Could not find a chat ID in the URL.")
+				return
+			}
+			const chatId = match[1]
 
-  buttonContainer.prepend(saveButton);
-}
+			console.log(`Attempting to fetch chat "${chatId}" to save it...`)
+			try {
+				const value = await getFromIndexedDb(DbName, StoreName, `CHAT_${chatId}`)
+				if (value === undefined) {
+					alert(`No value found for key: "CHAT_${chatId}"`)
+					return
+				}
 
-// --- Main Logic ---
-console.log('Safari Extension: Content script loaded and observing DOM.');
+				console.log("SUCCESS: Found value. Triggering download...")
+				const jsonString = JSON.stringify(value, null, 2)
 
-// This observer handles adding our custom button when its container appears.
-const buttonObserver = new MutationObserver((mutations, obs) => {
-  if (document.querySelector(BUTTON_CONTAINER_SELECTOR)) {
-    addSaveButton();
-    obs.disconnect(); // We only need to add the button once.
-  }
-});
-buttonObserver.observe(document.body, { childList: true, subtree: true });
+				const now = new Date()
+				const year = now.getFullYear().toString().slice(-2)
+				const month = (now.getMonth() + 1).toString().padStart(2, "0")
+				const day = now.getDate().toString().padStart(2, "0")
+				const hours = now.getHours().toString().padStart(2, "0")
+				const minutes = now.getMinutes().toString().padStart(2, "0")
+				const seconds = now.getSeconds().toString().padStart(2, "0")
 
+				const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`
+				const filename = `${timestamp}-${chatId}.json`
 
-// This observer handles removing unwanted elements whenever they are added to the DOM.
-const removalObserver = new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    for (const node of mutation.addedNodes) {
-      // We only care about element nodes.
-      if (node.nodeType !== 1) continue;
+				triggerDownload(filename, jsonString)
+			} catch (error) {
+				console.error("ERROR: Failed to access IndexedDB.", error)
+				alert("Error accessing IndexedDB. See console for details.")
+			}
+		})
 
-      // Check for the buy button
-      const buyButton = node.matches(BUY_BUTTON_SELECTOR) ? node : node.querySelector(BUY_BUTTON_SELECTOR);
-      if (buyButton) {
-        console.log('Safari Extension: Buy button detected. Removing it.');
-        buyButton.remove();
-      }
+		buttonContainer.prepend(saveButton)
+	}
 
-      // Check for the buy modal
-      const buyModal = node.matches(BUY_MODAL_SELECTOR) ? node : node.querySelector(BUY_MODAL_SELECTOR);
-      if (buyModal) {
-        console.log('Safari Extension: Upgrade modal detected. Closing it.');
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
-      }
-    }
-  }
-});
-removalObserver.observe(document.body, { childList: true, subtree: true });
+	// --- Main Logic ---
+	console.log("Safari Extension: Content script loaded and observing DOM.")
 
+	// This observer handles adding our custom button when its container appears.
+	const buttonObserver = new MutationObserver((mutations, obs) => {
+		if (document.querySelector(ButtonContainerSelector)) {
+			addSaveButton()
+			obs.disconnect() // We only need to add the button once.
+		}
+	})
+	buttonObserver.observe(document.body, { childList: true, subtree: true })
 
-// ----[ Styling / CSS on page load ]----
-function injectCss(){
-  const style = document.createElement('style');
-  style.textContent = `
+	// This observer handles removing unwanted elements whenever they are added to the DOM.
+	const removalObserver = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				// We only care about element nodes.
+				if (node.nodeType !== 1) continue
+
+				// Check for the buy button
+				const buyButton = node.matches(BuyButtonSelector) ? node : node.querySelector(BuyButtonSelector)
+				if (buyButton) {
+					console.log("Safari Extension: Buy button detected. Removing it.")
+					buyButton.remove()
+				}
+
+				// Check for the buy modal
+				const buyModal = node.matches(BuyModalSelector) ? node : node.querySelector(BuyModalSelector)
+				if (buyModal) {
+					console.log("Safari Extension: Upgrade modal detected. Closing it.")
+					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
+				}
+			}
+		}
+	})
+	removalObserver.observe(document.body, { childList: true, subtree: true })
+
+	// ----[ Styling / CSS on page load ]----
+	function injectCss() {
+		const style = document.createElement("style")
+		style.textContent = `
   /* --- Chat Styles --- */
   @import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000');
 
@@ -209,10 +210,9 @@ function injectCss(){
   code, kbd, pre, samp {
     font-family: "Fira Code Nerd Font", "Times New Roman", monospace;
   }
-  `;
-  document.head.appendChild(style);
+  `
+		document.head.appendChild(style)
+	}
 
-
-}
-
-injectCss();
+	injectCss()
+})()

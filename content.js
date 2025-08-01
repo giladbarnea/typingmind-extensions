@@ -1,3 +1,14 @@
+// ==UserScript==
+// @name         Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
+// @namespace    http://tampermonkey.net/
+// @version      2025-08-01
+// @description  Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
+// @author       You
+// @match        https://typingmind.com/*
+// @icon         https://www.typingmind.com/favicon-192x192.png
+// @grant        none
+// ==/UserScript==
+
 // --- Configuration ---
 const BUY_MODAL_SELECTOR = '[id*="headlessui-dialog-panel"]';
 const BUY_BUTTON_SELECTOR = 'button#nav-buy-button';

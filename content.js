@@ -141,10 +141,7 @@
 	// #endregion Save Chat
 	
 	function removeHoverClasses(node){
-		const responseBlock = node.matches(ResponseBlockSelector) ? node : null
-		if (responseBlock) {
-			responseBlock.classList.remove('hover:bg-slate-50', 'dark:hover:bg-white/5')
-		}
+		node.classList.remove('hover:bg-slate-50', 'dark:hover:bg-white/5')
 	}
 
 	// --- Main Logic ---

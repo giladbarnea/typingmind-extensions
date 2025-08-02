@@ -141,9 +141,31 @@
 
 	// #endregion Save Chat
 
+	// #region ---[ Element Modifications ]---
 	function removeHoverClasses(node) {
 		node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
 	}
+
+	function makeUserMessagesLessWide() {
+		document.querySelector("div.dynamic-chat-content-container").classList.add("max-w-3xl", "mx-auto")
+		document
+			.querySelectorAll('div[data-element-id="response-block"]:has(>div>div>div[data-element-id="user-message"])')
+			.forEach((userMsgResponseBlock) => {
+				userMsgResponseBlock.classList.remove("mx-auto")
+				userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
+
+				// Remove the hardcoded max-width style
+				userMsgResponseBlock.style["max-width"] = ""
+			})
+	}
+	
+	function removeAvatars(){
+		document.querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach(avatarContainer=>{
+			avatarContainer.remove()
+		})
+	}
+
+	// #endregion Element Modifications
 
 	// --- Main Logic ---
 	console.log("Extension: Content script loaded and observing DOM.")
@@ -272,6 +294,7 @@
     font-size: 14px;
 
   }
+	
   `
 		document.head.appendChild(style)
 	}
@@ -287,5 +310,9 @@
 		}
 
 		document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
+
+		makeUserMessagesLessWide()
+		
+		removeAvatars()
 	})
 })()

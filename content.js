@@ -27,7 +27,8 @@
 	const SaveJsonButtonId = "save-json-button"
 	const SidebarSelector = 'div[data-element-id="nav-container"]'
 	const isSidebarOpen = () => !document.querySelector(SidebarSelector).matches(".opacity-0")
-	const ResponseBlockSelector = 'div[data-element-id=response-block]'
+	const closeSidebar = () => document.querySelector('button[aria-label="Open sidebar"]').click()
+	const ResponseBlockSelector = "div[data-element-id=response-block]"
 
 	// #region ---[ Save Chat ]---
 	// --- IndexedDB Configuration ---
@@ -139,9 +140,9 @@
 	}
 
 	// #endregion Save Chat
-	
-	function removeHoverClasses(node){
-		node.classList.remove('hover:bg-slate-50', 'dark:hover:bg-white/5')
+
+	function removeHoverClasses(node) {
+		node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
 	}
 
 	// --- Main Logic ---
@@ -150,11 +151,59 @@
 	// #region ---[ Body Observer ]---
 
 	/**
+	 * Executes a callback when the page has "settled" down.
+	 * This is useful for modern, reactive websites where content loads asynchronously.
+	 *
+	 * @param {() => void} callback The function to call when the page is settled.
+	 * @param {number} [settleTime=500] The time in milliseconds of inactivity to wait for.
+	 * @param {Element} [targetNode=document.body] The DOM element to observe for mutations.
+	 */
+	function onPageSettled(callback, settleTime = 500, targetNode = document.body) {
+		let settleTimer
+
+		// Create an observer instance linked to a callback function
+		const observer = new MutationObserver((mutationsList, obs) => {
+			// We've detected a mutation, so we clear the existing timer
+			clearTimeout(settleTimer)
+
+			// And start a new one
+			settleTimer = setTimeout(() => {
+				// If this timer completes, it means no mutations have occurred in `settleTime` ms.
+				console.log("Page has settled. Firing callback.")
+
+				// We can now disconnect the observer to prevent further checks
+				obs.disconnect()
+
+				// And execute the user's callback function
+				callback()
+			}, settleTime)
+		})
+
+		// Configuration for the observer:
+		const config = {
+			childList: true,
+			subtree: true,
+			attributes: true,
+		}
+
+		// Start observing the target node for configured mutations
+		observer.observe(targetNode, config)
+
+		// We also start the initial timer, in case the page is already static
+		// or loads faster than the observer can be set up.
+		settleTimer = setTimeout(() => {
+			console.log("Initial settle time reached. Firing callback.")
+			observer.disconnect()
+			callback()
+		}, settleTime)
+	}
+
+	/**
 	 * Modifies elements in the DOM.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 * @param {string} BuyButtonSelector - The selector for the buy button.
 	 * @param {string} BuyModalSelector - The selector for the buy modal.
-	*/
+	 */
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: noise
 	function modifyElements(mutations, BuyButtonSelector, BuyModalSelector) {
 		for (const mutation of mutations) {
@@ -177,7 +226,7 @@
 						document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
 					}, 25)
 				}
-				
+
 				// Remove hover classes from response block
 				removeHoverClasses(node)
 			}
@@ -228,67 +277,15 @@
 	}
 	injectCss()
 
-
 	// #endregion CSS
-
-	/**
-	 * Executes a callback when the page has "settled" down.
-	 * This is useful for modern, reactive websites where content loads asynchronously.
-	 *
-	 * @param {() => void} callback The function to call when the page is settled.
-	 * @param {number} [settleTime=500] The time in milliseconds of inactivity to wait for.
-	 * @param {Element} [targetNode=document.body] The DOM element to observe for mutations.
-	 */
-	function onPageSettled(callback, settleTime = 500, targetNode = document.body) {
-		let settleTimer
-
-		// Create an observer instance linked to a callback function
-		const observer = new MutationObserver((mutationsList, obs) => {
-			// We've detected a mutation, so we clear the existing timer
-			clearTimeout(settleTimer)
-
-			// And start a new one
-			settleTimer = setTimeout(() => {
-				// If this timer completes, it means no mutations have occurred in `settleTime` ms.
-				console.log("Page has settled. Firing callback.")
-
-				// We can now disconnect the observer to prevent further checks
-				obs.disconnect()
-
-				// And execute the user's callback function
-				callback()
-			}, settleTime)
-		})
-
-		// Configuration for the observer:
-		const config = {
-			childList: true, // observe direct children additions/removals
-			subtree: true, // observe all descendants, not just children
-			attributes: true, // observe attribute changes
-		}
-
-		// Start observing the target node for configured mutations
-		observer.observe(targetNode, config)
-
-		// We also start the initial timer, in case the page is already static
-		// or loads faster than the observer can be set up.
-		settleTimer = setTimeout(() => {
-			console.log("Initial settle time reached. Firing callback.")
-			observer.disconnect()
-			callback()
-		}, settleTime)
-	}
-
-	// --- How to use it ---
 
 	onPageSettled(() => {
 		console.log("The page is now fully loaded and interactive!")
 		// Your code here. For example, run a tutorial, show a popup, etc.
 		if (isSidebarOpen()) {
-			document.querySelector('button[aria-label="Open sidebar"]').click()
+			closeSidebar()
 		}
-		
+
 		document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
 	})
-
 })()

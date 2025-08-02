@@ -29,6 +29,8 @@
 	const isSidebarOpen = () => !document.querySelector(SidebarSelector).matches(".opacity-0")
 	const closeSidebar = () => document.querySelector('button[aria-label="Open sidebar"]').click()
 	const ResponseBlockSelector = "div[data-element-id=response-block]"
+	const UserMessageSelector = "div[data-element-id=user-message]"
+	const AiResponseSelector = "div[data-element-id=ai-response]"
 
 	// #region ---[ Save Chat ]---
 	// --- IndexedDB Configuration ---
@@ -149,7 +151,7 @@
 	function makeUserMessagesLessWide() {
 		document.querySelector("div.dynamic-chat-content-container").classList.add("max-w-3xl", "mx-auto")
 		document
-			.querySelectorAll('div[data-element-id="response-block"]:has(>div>div>div[data-element-id="user-message"])')
+			.querySelectorAll(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)
 			.forEach((userMsgResponseBlock) => {
 				userMsgResponseBlock.classList.remove("mx-auto")
 				userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
@@ -158,9 +160,15 @@
 				userMsgResponseBlock.style["max-width"] = ""
 			})
 	}
-	
-	function removeAvatars(){
-		document.querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach(avatarContainer=>{
+
+	function improveMessageTypography() {
+		document.querySelectorAll(`${UserMessageSelector}, ${AiResponseSelector}`).forEach((message) => {
+			// message.classList.remove("text-sm")
+		})
+	}
+
+	function removeAvatars() {
+		document.querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach((avatarContainer) => {
 			avatarContainer.remove()
 		})
 	}
@@ -294,7 +302,21 @@
     font-size: 14px;
 
   }
-	
+
+  div[data-element-id="user-message"]{
+    background-color: #333537;
+	padding: 12px 16px;  /* px-4 py-3 */
+	border-radius: 24px 4px 24px 24px;  /* remove rounded-[13px]; rounded-2xl rounded-sm */
+  }
+  div[data-element-id="user-message"], div[data-element-id="ai-response"]{
+    line-height: 24px;  /* leading-6 */
+  }
+  div[role=presentation]{
+	border-color: rgb(74, 80, 80);
+	border-width: 0.5px;
+	box-shadow: 0 2px 8px -2px color(from #a2a9b0 srgb r g b/.16);
+	background-color: inherit;
+  }
   `
 		document.head.appendChild(style)
 	}
@@ -312,7 +334,12 @@
 		document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
 
 		makeUserMessagesLessWide()
-		
+
 		removeAvatars()
+
+		improveMessageTypography()
+
+		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
+		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
 	})
 })()

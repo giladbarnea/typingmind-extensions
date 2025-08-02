@@ -14,18 +14,21 @@
 
 	// --- Configuration ---
 	const BuyModalSelector = `div[data-element-id=pop-up-modal]
-		:not(
-			:has(
-				> div > div > div > form > input[data-element-id=plugin-url-input]
-			),
-			:has(
-				> div > div > div > div > div.flex:has(> button:nth-of-type(2))
-			)
+	:not(
+		:has(
+			> div > div > div > form > input[data-element-id=plugin-url-input]
+		),
+		:has(
+			> div > div > div > form > input[data-element-id=plugin-url-input]
+		)
 	)`
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
 	const SaveJsonButtonId = "save-json-button"
+	const SidebarSelector = 'div[data-element-id="nav-container"]'
+	const isSidebarOpen = () => !document.querySelector(SidebarSelector).matches(".opacity-0")
 
+	// #region ---[ Save Chat ]---
 	// --- IndexedDB Configuration ---
 	const DbName = "keyval-store"
 	const StoreName = "keyval"
@@ -67,7 +70,7 @@
 	 */
 	function addSaveButton() {
 		const buttonContainer = document.querySelector(ButtonContainerSelector)
-		if (!buttonContainer || document.getElementById(SaveJsonButtonId)) {
+		if (!buttonContainer || saveButtonExists()) {
 			return
 		}
 
@@ -130,46 +133,53 @@
 		buttonContainer.prepend(saveButton)
 	}
 
+	function saveButtonExists() {
+		return !!document.getElementById(SaveJsonButtonId)
+	}
+
+	// #endregion Save Chat
+
 	// --- Main Logic ---
 	console.log("Extension: Content script loaded and observing DOM.")
 
-	// This observer handles adding our custom button when its container appears.
-	const buttonObserver = new MutationObserver((mutations, obs) => {
-		if (document.querySelector(ButtonContainerSelector)) {
-			addSaveButton()
-			obs.disconnect() // We only need to add the button once.
-		}
-	})
-	buttonObserver.observe(document.body, { childList: true, subtree: true })
+	// #region ---[ Body Observer ]---
 
-	// This observer handles removing unwanted elements whenever they are added to the DOM.
-	const removalObserver = new MutationObserver((mutations) => {
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: noise
+	function removeUnwantedElements(mutations, BuyButtonSelector, BuyModalSelector) {
 		for (const mutation of mutations) {
 			for (const node of mutation.addedNodes) {
 				// We only care about element nodes.
 				if (node.nodeType !== 1) continue
 
-				// Check for the buy button
+				// Buy button
 				const buyButton = node.matches(BuyButtonSelector) ? node : node.querySelector(BuyButtonSelector)
 				if (buyButton) {
 					console.log("Extension: Buy button detected. Removing it.")
 					buyButton.remove()
 				}
 
-				// Check for the buy modal
+				// Buy modal
 				const buyModal = node.matches(BuyModalSelector) ? node : node.querySelector(BuyModalSelector)
 				if (buyModal) {
 					console.log("Extension: Upgrade modal detected. Closing it.")
 					setTimeout(() => {
 						document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
-					}, 250)
+					}, 25)
 				}
 			}
 		}
-	})
-	removalObserver.observe(document.body, { childList: true, subtree: true })
+	}
 
-	// ----[ Styling / CSS on page load ]----
+	const bodyObserver = new MutationObserver((mutations) => {
+		// Add our custom button when its container appears.
+		addSaveButton() // Assumes function is idempotent.
+
+		removeUnwantedElements(mutations, BuyButtonSelector, BuyModalSelector)
+	})
+	bodyObserver.observe(document.body, { childList: true, subtree: true })
+	// #endregion Body Observer
+
+	// #region ---[ CSS ]---
 	function injectCss() {
 		const style = document.createElement("style")
 		style.textContent = `
@@ -202,6 +212,67 @@
   `
 		document.head.appendChild(style)
 	}
-
 	injectCss()
+
+
+	// #endregion CSS
+
+	/**
+	 * Executes a callback when the page has "settled" down.
+	 * This is useful for modern, reactive websites where content loads asynchronously.
+	 *
+	 * @param {() => void} callback The function to call when the page is settled.
+	 * @param {number} [settleTime=500] The time in milliseconds of inactivity to wait for.
+	 * @param {Element} [targetNode=document.body] The DOM element to observe for mutations.
+	 */
+	function onPageSettled(callback, settleTime = 500, targetNode = document.body) {
+		let settleTimer
+
+		// Create an observer instance linked to a callback function
+		const observer = new MutationObserver((mutationsList, obs) => {
+			// We've detected a mutation, so we clear the existing timer
+			clearTimeout(settleTimer)
+
+			// And start a new one
+			settleTimer = setTimeout(() => {
+				// If this timer completes, it means no mutations have occurred in `settleTime` ms.
+				console.log("Page has settled. Firing callback.")
+
+				// We can now disconnect the observer to prevent further checks
+				obs.disconnect()
+
+				// And execute the user's callback function
+				callback()
+			}, settleTime)
+		})
+
+		// Configuration for the observer:
+		const config = {
+			childList: true, // observe direct children additions/removals
+			subtree: true, // observe all descendants, not just children
+			attributes: true, // observe attribute changes
+		}
+
+		// Start observing the target node for configured mutations
+		observer.observe(targetNode, config)
+
+		// We also start the initial timer, in case the page is already static
+		// or loads faster than the observer can be set up.
+		settleTimer = setTimeout(() => {
+			console.log("Initial settle time reached. Firing callback.")
+			observer.disconnect()
+			callback()
+		}, settleTime)
+	}
+
+	// --- How to use it ---
+
+	onPageSettled(() => {
+		console.log("The page is now fully loaded and interactive!")
+		// Your code here. For example, run a tutorial, show a popup, etc.
+		if (isSidebarOpen()) {
+			document.querySelector('button[aria-label="Open sidebar"]').click()
+		}
+	})
+
 })()

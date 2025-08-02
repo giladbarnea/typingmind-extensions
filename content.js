@@ -28,6 +28,51 @@
 	const SidebarSelector = 'div[data-element-id="nav-container"]'
 	const isSidebarOpen = () => !document.querySelector(SidebarSelector).matches(".opacity-0")
 
+	// Added after configuration section around line 28
+	const bgMap = new WeakMap();
+
+	function initBgMap(node = document.body) {
+		if (node.nodeType === 1) {
+			bgMap.set(node, getComputedStyle(node).backgroundColor);
+		}
+		const elements = node.querySelectorAll('*');
+		elements.forEach(el => {
+			bgMap.set(el, getComputedStyle(el).backgroundColor);
+		});
+	}
+
+	function addToMap(node) {
+		if (node.nodeType !== 1) return;
+		bgMap.set(node, getComputedStyle(node).backgroundColor);
+		const elements = node.querySelectorAll('*');
+		elements.forEach(el => {
+			bgMap.set(el, getComputedStyle(el).backgroundColor);
+		});
+	}
+
+	function removeFromMap(node) {
+		if (node.nodeType !== 1) return;
+		bgMap.delete(node);
+		const elements = node.querySelectorAll('*');
+		elements.forEach(el => bgMap.delete(el));
+	}
+
+	function checkAndUpdate(el) {
+		if (!bgMap.has(el)) return;
+		const currentBg = getComputedStyle(el).backgroundColor;
+		const oldBg = bgMap.get(el);
+		if (oldBg !== currentBg) {
+			console.log(`Captured node with background-color change from ${oldBg} to ${currentBg}:`, el);
+		}
+		bgMap.set(el, currentBg);
+	}
+
+	function checkAndUpdateSubtree(node) {
+		if (node.nodeType !== 1) return;
+		checkAndUpdate(node);
+		Array.from(node.children).forEach(child => checkAndUpdateSubtree(child));
+	}
+
 	// #region ---[ Save Chat ]---
 	// --- IndexedDB Configuration ---
 	const DbName = "keyval-store"
@@ -144,9 +189,16 @@
 
 	// #region ---[ Body Observer ]---
 
+	/**
+	 * Removes unwanted elements from the DOM.
+	 * @param {MutationRecord[]} mutations - The mutations to process.
+	 * @param {string} BuyButtonSelector - The selector for the buy button.
+	 * @param {string} BuyModalSelector - The selector for the buy modal.
+	*/
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: noise
 	function removeUnwantedElements(mutations, BuyButtonSelector, BuyModalSelector) {
 		for (const mutation of mutations) {
+			// implement here
 			for (const node of mutation.addedNodes) {
 				// We only care about element nodes.
 				if (node.nodeType !== 1) continue
@@ -175,8 +227,18 @@
 		addSaveButton() // Assumes function is idempotent.
 
 		removeUnwantedElements(mutations, BuyButtonSelector, BuyModalSelector)
+
+		for (const mutation of mutations) {
+			if (mutation.type === 'childList') {
+				mutation.addedNodes.forEach(addToMap);
+				mutation.removedNodes.forEach(removeFromMap);
+			} else if (mutation.type === 'attributes') {
+				checkAndUpdateSubtree(mutation.target);
+			}
+		}
 	})
-	bodyObserver.observe(document.body, { childList: true, subtree: true })
+	initBgMap();
+	bodyObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
 	// #endregion Body Observer
 
 	// #region ---[ CSS ]---

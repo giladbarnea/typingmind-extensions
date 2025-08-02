@@ -181,8 +181,8 @@
 					}, 25)
 				}
 				
-				// Remove hover classes from response blocks
-				document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
+				// Remove hover classes from response block
+				removeHoverClasses(node)
 			}
 		}
 	}
@@ -291,7 +291,7 @@
 			document.querySelector('button[aria-label="Open sidebar"]').click()
 		}
 		
-		removeHoverClasses(document.body)
+		document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
 	})
 
 })()

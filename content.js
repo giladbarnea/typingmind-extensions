@@ -19,7 +19,7 @@
 			> div > div > div > form > input[data-element-id=plugin-url-input]
 		),
 		:has(
-			> div > div > div > form > input[data-element-id=plugin-url-input]
+			> div > div > div > div > div.flex > button:nth-of-type(2)
 		)
 	)`
 	const BuyButtonSelector = "button#nav-buy-button"

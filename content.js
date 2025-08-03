@@ -148,27 +148,44 @@
 		node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
 	}
 
-	function makeUserMessagesLessWide() {
-		document.querySelector("div.dynamic-chat-content-container").classList.add("max-w-3xl", "mx-auto")
-		document
-			.querySelectorAll(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)
-			.forEach((userMsgResponseBlock) => {
-				userMsgResponseBlock.classList.remove("mx-auto")
-				userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
+	function makeMessagesAlignedAndLessWide(node) {
+		const chatContentContainer = document.querySelector("div.dynamic-chat-content-container")
+		if (!chatContentContainer.classList.contains("max-w-3xl", "mx-auto")) {
+			chatContentContainer.classList.add("max-w-3xl", "mx-auto")
+		}
 
-				// Remove the hardcoded max-width style
-				userMsgResponseBlock.style["max-width"] = ""
-			})
+		const shrinkUserMessage = (userMsgResponseBlock) => {
+			userMsgResponseBlock.classList.remove("mx-auto")
+			userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
+
+			// Remove the hardcoded max-width style
+			userMsgResponseBlock.style["max-width"] = ""
+		}
+		const shrinkAssistantMessage = (aiMsgResponseBlock) => {
+			// We like mx-auto because it centers the message, so we don't remove it.
+			aiMsgResponseBlock.classList.add("max-w-xl")
+
+			// Remove the hardcoded max-width style
+			aiMsgResponseBlock.style["max-width"] = ""
+		}
+		if (node?.matches(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)) {
+			shrinkUserMessage(node)
+		} else if (node?.matches(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)) {
+			shrinkAssistantMessage(node)
+		} else {
+			document.querySelectorAll(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`).forEach(shrinkUserMessage)
+			document.querySelectorAll(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`).forEach(shrinkAssistantMessage)
+		}
 	}
 
-	function improveMessageTypography() {
-		document.querySelectorAll(`${UserMessageSelector}, ${AiResponseSelector}`).forEach((message) => {
+	function improveMessageTypography(node) {
+		// (node||document).querySelectorAll(`${UserMessageSelector}, ${AiResponseSelector}`).forEach((message) => {
 			// message.classList.remove("text-sm")
-		})
+		// })
 	}
 
-	function removeAvatars() {
-		document.querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach((avatarContainer) => {
+	function removeAvatars(node) {
+		(node||document).querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach((avatarContainer) => {
 			avatarContainer.remove()
 		})
 	}
@@ -257,8 +274,12 @@
 					}, 25)
 				}
 
-				// Remove hover classes from response block
-				removeHoverClasses(node)
+				if (node.matches(ResponseBlockSelector)) {
+					removeHoverClasses(node)
+					makeMessagesAlignedAndLessWide(node)
+					removeAvatars(node)
+					improveMessageTypography(node)
+				}
 			}
 		}
 	}
@@ -277,16 +298,18 @@
 		const style = document.createElement("style")
 		style.textContent = `
   /* --- Chat Styles --- */
-  
+  :root {
+	--main-dark-color: #1B1C1D;
+  }
   main {
     font-family: "Google Sans Display", sans-serif;
-    line-height: 28px;
-    font-size: 16px;
+    line-height: 1.75rem;  /* translates to 28px, which is 16px*1.75. But using font-size 15px, this should be a little lower */
+    font-size: 15px;
     background-color: #1B1C1D;
     color: white;
   }
   code, kbd, pre, samp {
-    font-family: "Fira Code Nerd Font", monospace;
+	font-family: "Google Sans Mono", "Google Sans Code", "Fira Code Nerd Font", monospace;
   }
   code.inline, kbd.inline, pre.inline, samp.inline {
     background-color: rgba(194, 192, 182, 0.05) !important;
@@ -295,12 +318,16 @@
     border-width: 0.5px !important;
     color: rgb(232, 107, 107);
   }
-    
+  .text-sm, .prose-sm {
+    font-size: 15px;
+  }
+  .dark\:bg-\[--main-dark-color\]:is(.dark *) {
+	background-color: #1B1C1D;
+  }
   div[data-element-id="sidebar-middle-part"]{
     background-color: #282A2C;
     color: rgb(211, 227, 253);
     font-size: 14px;
-
   }
 
   div[data-element-id="user-message"]{
@@ -309,7 +336,7 @@
 	border-radius: 24px 4px 24px 24px;  /* remove rounded-[13px]; rounded-2xl rounded-sm */
   }
   div[data-element-id="user-message"], div[data-element-id="ai-response"]{
-    line-height: 24px;  /* leading-6 */
+    line-height: 1.75rem;  /* leading-6 */
   }
   div[role=presentation]{
 	border-color: rgb(74, 80, 80);
@@ -317,23 +344,27 @@
 	box-shadow: 0 2px 8px -2px color(from #a2a9b0 srgb r g b/.16);
 	background-color: inherit;
   }
+	
+  #elements-in-action-buttons{
+	display: none;
+  }
   `
 		document.head.appendChild(style)
 	}
-	injectCss()
+	
 
 	// #endregion CSS
 
 	onPageSettled(() => {
 		console.log("The page is now fully loaded and interactive!")
-		// Your code here. For example, run a tutorial, show a popup, etc.
+		injectCss()
 		if (isSidebarOpen()) {
 			closeSidebar()
 		}
 
 		document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
 
-		makeUserMessagesLessWide()
+		makeMessagesAlignedAndLessWide()
 
 		removeAvatars()
 
@@ -341,5 +372,7 @@
 
 		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
 		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
+		
+		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
 	})
 })()

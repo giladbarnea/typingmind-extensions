@@ -13,14 +13,19 @@
 	// Your code here...
 
 	// --- Configuration ---
+	// const BuyModalSelector = `div[data-element-id=pop-up-modal]
+	// :not(
+	// 	:has(
+	// 		> div > div > div > form > input[data-element-id=plugin-url-input]
+	// 	),
+	// 	:has(
+	// 		> div > div > div > div > div.flex > button:nth-of-type(2)
+	// 	)
+	// )`
 	const BuyModalSelector = `div[data-element-id=pop-up-modal]
-	:not(
-		:has(
-			> div > div > div > form > input[data-element-id=plugin-url-input]
-		),
-		:has(
-			> div > div > div > div > div.flex > button:nth-of-type(2)
-		)
+	:has(
+		a[href*="https://buy.typingmind.com"], 
+		> form > div > input[placeholder="Enter your email"]
 	)`
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
@@ -169,6 +174,7 @@
 			aiMsgResponseBlock.style["max-width"] = ""
 		}
 		if (node?.matches(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)) {
+			console.log("Extension: Shrinking user message:", node)
 			shrinkUserMessage(node)
 		} else if (node?.matches(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)) {
 			shrinkAssistantMessage(node)
@@ -252,21 +258,21 @@
 	 * @param {string} BuyModalSelector - The selector for the buy modal.
 	 */
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: noise
-	function modifyElements(mutations, BuyButtonSelector, BuyModalSelector) {
+	function modifyElements(mutations, buyButtonSelector, buyModalSelector) {
 		for (const mutation of mutations) {
 			for (const node of mutation.addedNodes) {
 				// We only care about element nodes.
 				if (node.nodeType !== 1) continue
 
 				// Buy button
-				const buyButton = node.matches(BuyButtonSelector) ? node : node.querySelector(BuyButtonSelector)
+				const buyButton = node.matches(buyButtonSelector) ? node : node.querySelector(buyButtonSelector)
 				if (buyButton) {
 					console.log("Extension: Buy button detected. Removing it.")
 					buyButton.remove()
 				}
 
 				// Buy modal
-				const buyModal = node.matches(BuyModalSelector) ? node : node.querySelector(BuyModalSelector)
+				const buyModal = node.matches(buyModalSelector) ? node : node.querySelector(buyModalSelector)
 				if (buyModal) {
 					console.log("Extension: Upgrade modal detected. Closing it.")
 					setTimeout(() => {
@@ -275,6 +281,7 @@
 				}
 
 				if (node.matches(ResponseBlockSelector)) {
+					console.log("Node matches ResponseBlockSelector:", node)
 					removeHoverClasses(node)
 					makeMessagesAlignedAndLessWide(node)
 					removeAvatars(node)
@@ -290,7 +297,7 @@
 
 		modifyElements(mutations, BuyButtonSelector, BuyModalSelector)
 	})
-	bodyObserver.observe(document.body, { childList: true, subtree: true })
+	bodyObserver.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true })
 	// #endregion Body Observer
 
 	// #region ---[ CSS ]---
@@ -305,7 +312,7 @@
     font-family: "Google Sans Display", sans-serif;
     line-height: 1.75rem;  /* translates to 28px, which is 16px*1.75. But using font-size 15px, this should be a little lower */
     font-size: 15px;
-    background-color: #1B1C1D;
+    background-color: #1B1C1D !important;
     color: white;
   }
   code, kbd, pre, samp {
@@ -372,7 +379,13 @@
 
 		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
 		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
-		
+
 		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
+		const [modelSelector, pluginsMenu] = [...document.querySelector('[data-element-id="chat-space-end-part"]').parentElement.querySelectorAll('button')].slice(0, 2)
+		const newParent = document.querySelector('[data-element-id="chat-input-actions"]>div');
+		modelSelector.querySelectorAll('svg').forEach((svg) => svg.remove());
+		pluginsMenu.querySelectorAll('svg').forEach((svg) => svg.remove());
+		newParent.appendChild(modelSelector)
+		newParent.appendChild(pluginsMenu)
 	})
 })()

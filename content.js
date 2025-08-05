@@ -150,7 +150,12 @@
 
 	// #region ---[ Element Modifications ]---
 	function removeHoverClasses(node) {
-		node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
+		if (node) {
+			node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
+			console.log("Removed hover classes from node:", node)
+		} else {
+			document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
+		}
 	}
 
 	function makeMessagesAlignedAndLessWide(node) {
@@ -160,17 +165,18 @@
 		}
 
 		const shrinkUserMessage = (userMsgResponseBlock) => {
-			userMsgResponseBlock.classList.remove("mx-auto")
-			userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
+			;["ml-auto", "mr-0", "max-w-xl"].forEach((cls) => {
+				if (!userMsgResponseBlock.classList.contains(cls))
+					userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl")
+			})
 
 			// Remove the hardcoded max-width style
 			userMsgResponseBlock.style["max-width"] = ""
 		}
 		const shrinkAssistantMessage = (aiMsgResponseBlock) => {
 			// We like mx-auto because it centers the message, so we don't remove it.
-			aiMsgResponseBlock.classList.add("max-w-xl")
+			if (!aiMsgResponseBlock.classList.contains("max-w-xl")) aiMsgResponseBlock.classList.add("max-w-xl")
 
-			// Remove the hardcoded max-width style
 			aiMsgResponseBlock.style["max-width"] = ""
 		}
 		if (node?.matches(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)) {
@@ -179,19 +185,23 @@
 		} else if (node?.matches(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)) {
 			shrinkAssistantMessage(node)
 		} else {
-			document.querySelectorAll(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`).forEach(shrinkUserMessage)
-			document.querySelectorAll(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`).forEach(shrinkAssistantMessage)
+			document
+				.querySelectorAll(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)
+				.forEach(shrinkUserMessage)
+			document
+				.querySelectorAll(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)
+				.forEach(shrinkAssistantMessage)
 		}
 	}
 
 	function improveMessageTypography(node) {
 		// (node||document).querySelectorAll(`${UserMessageSelector}, ${AiResponseSelector}`).forEach((message) => {
-			// message.classList.remove("text-sm")
+		// message.classList.remove("text-sm")
 		// })
 	}
 
 	function removeAvatars(node) {
-		(node||document).querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach((avatarContainer) => {
+		;(node || document).querySelectorAll('div[data-element-id="chat-avatar-container"]').forEach((avatarContainer) => {
 			avatarContainer.remove()
 		})
 	}
@@ -250,6 +260,7 @@
 			callback()
 		}, settleTime)
 	}
+	var LogMutations = false
 
 	/**
 	 * Modifies elements in the DOM.
@@ -257,37 +268,44 @@
 	 * @param {string} BuyButtonSelector - The selector for the buy button.
 	 * @param {string} BuyModalSelector - The selector for the buy modal.
 	 */
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: noise
 	function modifyElements(mutations, buyButtonSelector, buyModalSelector) {
 		for (const mutation of mutations) {
-			for (const node of mutation.addedNodes) {
-				// We only care about element nodes.
-				if (node.nodeType !== 1) continue
-
-				// Buy button
-				const buyButton = node.matches(buyButtonSelector) ? node : node.querySelector(buyButtonSelector)
-				if (buyButton) {
-					console.log("Extension: Buy button detected. Removing it.")
-					buyButton.remove()
-				}
-
-				// Buy modal
-				const buyModal = node.matches(buyModalSelector) ? node : node.querySelector(buyModalSelector)
-				if (buyModal) {
-					console.log("Extension: Upgrade modal detected. Closing it.")
-					setTimeout(() => {
-						document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
-					}, 25)
-				}
-
-				if (node.matches(ResponseBlockSelector)) {
-					console.log("Node matches ResponseBlockSelector:", node)
-					removeHoverClasses(node)
-					makeMessagesAlignedAndLessWide(node)
-					removeAvatars(node)
-					improveMessageTypography(node)
-				}
+			const target = mutation.target
+			if (mutation.type === "childList" && target?.matches?.(ResponseBlockSelector)) {
+				console.log("Node target matches ResponseBlockSelector:", target)
+				removeHoverClasses(target)
+				makeMessagesAlignedAndLessWide(target)
+				removeAvatars(target)
+				improveMessageTypography(target)
 			}
+			// Buy button
+			if (target.matches(buyButtonSelector)) {
+				console.log("Extension: Buy button detected. Removing it.")
+				target.remove()
+			}
+
+			// Buy modal
+			if (target.matches(buyModalSelector)) {
+				console.log("Extension: Upgrade modal detected. Closing it.")
+				setTimeout(() => {
+					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
+				}, 25)
+			}
+
+			// if (
+			// 	LogMutations &&
+			// 	mutation.type === "childList" &&
+			// 	(mutation.target?.matches?.(ResponseBlockSelector) ||
+			// 		[...mutation.addedNodes].some((n) => n?.matches?.(ResponseBlockSelector)) ||
+			// 		[...mutation.removedNodes].some((n) => n?.matches?.(ResponseBlockSelector)) ||
+			// 		mutation.nextSibling?.matches?.(ResponseBlockSelector) ||
+			// 		mutation.oldValue?.matches?.(ResponseBlockSelector) ||
+			// 		mutation.previousSibling?.matches?.(ResponseBlockSelector))
+			// ) {
+			// 	console.log("mutation:", mutation)
+			// 	debugger;
+
+			// }
 		}
 	}
 
@@ -358,7 +376,6 @@
   `
 		document.head.appendChild(style)
 	}
-	
 
 	// #endregion CSS
 
@@ -381,10 +398,12 @@
 		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
 
 		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
-		const [modelSelector, pluginsMenu] = [...document.querySelector('[data-element-id="chat-space-end-part"]').parentElement.querySelectorAll('button')].slice(0, 2)
-		const newParent = document.querySelector('[data-element-id="chat-input-actions"]>div');
-		modelSelector.querySelectorAll('svg').forEach((svg) => svg.remove());
-		pluginsMenu.querySelectorAll('svg').forEach((svg) => svg.remove());
+		const [modelSelector, pluginsMenu] = [
+			...document.querySelector('[data-element-id="chat-space-end-part"]').parentElement.querySelectorAll("button"),
+		].slice(0, 2)
+		const newParent = document.querySelector('[data-element-id="chat-input-actions"]>div')
+		modelSelector.querySelectorAll("svg").forEach((svg) => svg.remove())
+		pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove())
 		newParent.appendChild(modelSelector)
 		newParent.appendChild(pluginsMenu)
 	})

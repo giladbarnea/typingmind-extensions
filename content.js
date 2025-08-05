@@ -25,7 +25,7 @@
 	const BuyModalSelector = `div[data-element-id=pop-up-modal]
 	:has(
 		a[href*="https://buy.typingmind.com"], 
-		> form > div > input[placeholder="Enter your email"]
+		 > div > form > div > input[placeholder="Enter your email"]
 	)`
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
@@ -152,7 +152,6 @@
 	function removeHoverClasses(node) {
 		if (node) {
 			node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5")
-			console.log("Removed hover classes from node:", node)
 		} else {
 			document.querySelectorAll(ResponseBlockSelector).forEach(removeHoverClasses)
 		}
@@ -180,7 +179,6 @@
 			aiMsgResponseBlock.style["max-width"] = ""
 		}
 		if (node?.matches(`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`)) {
-			console.log("Extension: Shrinking user message:", node)
 			shrinkUserMessage(node)
 		} else if (node?.matches(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)) {
 			shrinkAssistantMessage(node)
@@ -207,6 +205,9 @@
 	}
 
 	function modifyInputBox() {
+		const alreadyModified = document.querySelectorAll('[data-element-id="chat-input-actions"]>div>button').length !== 2
+		if (alreadyModified) return
+
 		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
 		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
 
@@ -285,7 +286,6 @@
 		for (const mutation of mutations) {
 			const target = mutation.target
 			if (mutation.type === "childList" && target?.matches?.(ResponseBlockSelector)) {
-				console.log("Node target matches ResponseBlockSelector:", target)
 				removeHoverClasses(target)
 				makeMessagesAlignedAndLessWide(target)
 				removeAvatars(target)
@@ -294,13 +294,13 @@
 			}
 			// Buy button
 			if (target.matches?.(BuyButtonSelector)) {
-				console.log("Extension: Buy button detected. Removing it.")
+				console.log("Buy button detected. Removing it.")
 				target.remove()
 			}
 
 			// Buy modal
-			if (target.matches?.(BuyModalSelector)) {
-				console.log("Extension: Upgrade modal detected. Closing it.")
+			if ([...mutation.addedNodes].some((node) => node.matches?.(BuyModalSelector))) {
+				console.log("Upgrade modal detected. Closing it.")
 				setTimeout(() => {
 					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
 				}, 25)

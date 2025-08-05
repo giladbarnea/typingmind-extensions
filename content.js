@@ -206,6 +206,21 @@
 		})
 	}
 
+	function modifyInputBox() {
+		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
+		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
+
+		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
+		const [modelSelector, pluginsMenu] = [
+			...document.querySelector('[data-element-id="chat-space-end-part"]').parentElement.querySelectorAll("button"),
+		].slice(0, 2)
+		const newParent = document.querySelector('[data-element-id="chat-input-actions"]>div')
+		modelSelector.querySelectorAll("svg").forEach((svg) => svg.remove())
+		pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove())
+		newParent.appendChild(modelSelector)
+		newParent.appendChild(pluginsMenu)
+	}
+
 	// #endregion Element Modifications
 
 	// --- Main Logic ---
@@ -265,10 +280,8 @@
 	/**
 	 * Modifies elements in the DOM.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
-	 * @param {string} BuyButtonSelector - The selector for the buy button.
-	 * @param {string} BuyModalSelector - The selector for the buy modal.
 	 */
-	function modifyElements(mutations, buyButtonSelector, buyModalSelector) {
+	function modifyElements(mutations) {
 		for (const mutation of mutations) {
 			const target = mutation.target
 			if (mutation.type === "childList" && target?.matches?.(ResponseBlockSelector)) {
@@ -277,35 +290,21 @@
 				makeMessagesAlignedAndLessWide(target)
 				removeAvatars(target)
 				improveMessageTypography(target)
+				modifyInputBox()
 			}
 			// Buy button
-			if (target.matches(buyButtonSelector)) {
+			if (target.matches?.(BuyButtonSelector)) {
 				console.log("Extension: Buy button detected. Removing it.")
 				target.remove()
 			}
 
 			// Buy modal
-			if (target.matches(buyModalSelector)) {
+			if (target.matches?.(BuyModalSelector)) {
 				console.log("Extension: Upgrade modal detected. Closing it.")
 				setTimeout(() => {
 					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
 				}, 25)
 			}
-
-			// if (
-			// 	LogMutations &&
-			// 	mutation.type === "childList" &&
-			// 	(mutation.target?.matches?.(ResponseBlockSelector) ||
-			// 		[...mutation.addedNodes].some((n) => n?.matches?.(ResponseBlockSelector)) ||
-			// 		[...mutation.removedNodes].some((n) => n?.matches?.(ResponseBlockSelector)) ||
-			// 		mutation.nextSibling?.matches?.(ResponseBlockSelector) ||
-			// 		mutation.oldValue?.matches?.(ResponseBlockSelector) ||
-			// 		mutation.previousSibling?.matches?.(ResponseBlockSelector))
-			// ) {
-			// 	console.log("mutation:", mutation)
-			// 	debugger;
-
-			// }
 		}
 	}
 
@@ -313,7 +312,7 @@
 		// Add our custom button when its container appears.
 		addSaveButton() // Assumes function is idempotent.
 
-		modifyElements(mutations, BuyButtonSelector, BuyModalSelector)
+		modifyElements(mutations)
 	})
 	bodyObserver.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true })
 	// #endregion Body Observer
@@ -394,17 +393,6 @@
 
 		improveMessageTypography()
 
-		document.querySelector('div[role="presentation"]').classList.remove("rounded-xl", "dark:bg-slate-950")
-		document.querySelector('div[role="presentation"]').classList.add("rounded-3xl")
-
-		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
-		const [modelSelector, pluginsMenu] = [
-			...document.querySelector('[data-element-id="chat-space-end-part"]').parentElement.querySelectorAll("button"),
-		].slice(0, 2)
-		const newParent = document.querySelector('[data-element-id="chat-input-actions"]>div')
-		modelSelector.querySelectorAll("svg").forEach((svg) => svg.remove())
-		pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove())
-		newParent.appendChild(modelSelector)
-		newParent.appendChild(pluginsMenu)
+		modifyInputBox()
 	})
 })()

@@ -324,10 +324,9 @@
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function modifyElements(mutations) {
+		let removedModal = false
 		for (const mutation of mutations) {
-			// Additional modal detection methods
-			// TODO: this DOES capture because uses .querySelector.
-			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+			if (!removedModal && mutation.type === "childList" && mutation.addedNodes.length > 0) {
 				for (const addedNode of mutation.addedNodes) {
 					if (addedNode.nodeType === Node.ELEMENT_NODE) {
 						// Check for modals using broader criteria with all selector approaches
@@ -380,6 +379,7 @@
 							for (const match of matchResults) {
 								match.result.parentElement.remove()
 							}
+							removedModal = true
 							return
 						}
 					}

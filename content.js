@@ -10,7 +10,7 @@
 // @grant        none
 // ==/UserScript==
 
-;(function () {
+;(() => {
 	// Your code here...
 
 	// --- Configuration ---

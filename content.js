@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: <explanation> */
 // ==UserScript==
 // @name         Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
 // @namespace    http://tampermonkey.net/
@@ -274,7 +275,7 @@
 	 * Debug observer to catch modal appearances that the main observer might miss
 	 */
 	function createModalDebugObserver() {
-		debugLog("🔍 Setting up debug observer for modal detection...")
+		console.log("🔍 Setting up debug observer for modal detection...")
 		
 		const debugObserver = new MutationObserver((mutations) => {
 			for (const mutation of mutations) {
@@ -289,7 +290,7 @@
 								node.matches('div[role="dialog"]') ||
 								node.matches('div[aria-modal="true"]') ||
 								node.matches('.modal') ||
-								node.className.includes('modal') ||
+								node.className?.includes?.('modal') ||
 								node.textContent.includes('upgrade') ||
 								node.textContent.includes('buy') ||
 								node.querySelector('a[href*="buy.typingmind.com"]') ||
@@ -297,7 +298,7 @@
 							)
 							
 							if (isModal) {
-								debugLog("🚨 DEBUG: Potential modal detected!", {
+								console.log("🚨 DEBUG: Potential modal detected!", {
 									type: "addedNode",
 									element: node,
 									selector: node.getAttribute('data-element-id'),
@@ -321,7 +322,7 @@
 								Object.entries(results).forEach(([selectorType, matches]) => {
 									if (matches && matches.length > 0) {
 										foundAny = true
-										debugLog(`🚨 DEBUG: Modal found via ${selectorType} selector!`, {
+										console.log(`🚨 DEBUG: Modal found via ${selectorType} selector!`, {
 											type: "childModal",
 											selectorType: selectorType,
 											parent: node,
@@ -346,12 +347,12 @@
 						const isModalRelated = target.matches && (
 							target.matches('[data-element-id*="modal"]') ||
 							target.matches('[data-element-id*="pop-up"]') ||
-							target.className.includes('modal') ||
+							target.className?.includes?.('modal') ||
 							target.getAttribute('data-element-id') === 'pop-up-modal'
 						)
 						
 						if (isModalRelated) {
-							debugLog("🔄 DEBUG: Modal-related attribute change!", {
+							console.log("🔄 DEBUG: Modal-related attribute change!", {
 								type: "attributeChange",
 								element: target,
 								attributeName: mutation.attributeName,
@@ -372,7 +373,7 @@
 															target.querySelector('input[placeholder*="email"]')
 								
 								if (containsModalContent) {
-									debugLog("👁️ DEBUG: Element with modal content became visible!", {
+									console.log("👁️ DEBUG: Element with modal content became visible!", {
 										type: "visibilityChange",
 										element: target,
 										attributeName: mutation.attributeName,
@@ -397,7 +398,7 @@
 			characterDataOldValue: true
 		})
 		
-		debugLog("🔍 Debug observer active - will log any modal-related changes")
+		console.log("🔍 Debug observer active - will log any modal-related changes")
 		
 		return debugObserver
 	}
@@ -412,7 +413,7 @@
 	 * Fallback observer using Intersection Observer API to detect modals becoming visible
 	 */
 	function createIntersectionObserverFallback() {
-		debugLog("👁️ Setting up Intersection Observer fallback for modal detection...")
+		console.log("👁️ Setting up Intersection Observer fallback for modal detection...")
 		
 		const intersectionObserver = new IntersectionObserver((entries) => {
 			for (const entry of entries) {
@@ -426,7 +427,7 @@
 						element.matches('[data-element-id*="pop-up"]') ||
 						element.matches('div[role="dialog"]') ||
 						element.matches('div[aria-modal="true"]') ||
-						element.className.includes('modal')
+						element.className?.includes('modal')
 					)
 					
 					const containsModalContent = element.textContent.includes('upgrade') || 
@@ -435,7 +436,7 @@
 												element.querySelector('input[placeholder*="email"]')
 					
 					if (isModal || containsModalContent) {
-						debugLog("👁️ INTERSECTION: Modal became visible in viewport!", {
+						console.log("👁️ INTERSECTION: Modal became visible in viewport!", {
 							element: element,
 							selector: element.getAttribute('data-element-id'),
 							className: element.className,
@@ -446,7 +447,7 @@
 						
 						// Try to close the modal
 						if (element.matches(BuyModalSelector)) {
-							debugLog("🔥 INTERSECTION: Attempting to close detected buy modal...")
+							console.log("🔥 INTERSECTION: Attempting to close detected buy modal...")
 							element.remove()
 						}
 					}
@@ -473,7 +474,7 @@
 				intersectionObserver.observe(modal)
 			})
 			
-					debugLog(`👁️ INTERSECTION: Observing ${potentialModals.length} existing potential modals`)
+					console.log(`👁️ INTERSECTION: Observing ${potentialModals.length} existing potential modals`)
 	}
 	
 	// Set up a mutation observer specifically to watch for new potential modals to observe
@@ -489,11 +490,11 @@
 							node.matches('div[role="dialog"]') ||
 							node.matches('div[aria-modal="true"]') ||
 							node.matches('.modal') ||
-							node.className.includes('modal')
+							node.className?.includes?.('modal')
 						)
 						
 						if (isPotentialModal) {
-							debugLog("👁️ INTERSECTION: New potential modal detected, adding to observation list")
+							console.log("👁️ INTERSECTION: New potential modal detected, adding to observation list")
 							intersectionObserver.observe(node)
 						}
 						
@@ -507,7 +508,7 @@
 						`)
 						
 						if (childModals && childModals.length > 0) {
-							debugLog(`👁️ INTERSECTION: Found ${childModals.length} child modals, adding to observation`)
+							console.log(`👁️ INTERSECTION: Found ${childModals.length} child modals, adding to observation`)
 							childModals.forEach(modal => intersectionObserver.observe(modal))
 						}
 					}
@@ -524,13 +525,13 @@
 	// Start observing existing modals
 	observeExistingModals()
 	
-	debugLog("👁️ Intersection Observer fallback active")
+	console.log("👁️ Intersection Observer fallback active")
 		
 		return { intersectionObserver, modalWatcher }
 	}
 
 	// Start intersection observer fallback
-	const intersectionFallback = createIntersectionObserverFallback()
+	// const intersectionFallback = createIntersectionObserverFallback()
 
 	// #endregion Intersection Observer Fallback
 
@@ -539,7 +540,7 @@
 	 * Periodic check for modals as a final safety net
 	 */
 	function setupPeriodicModalCheck() {
-		debugLog("⏰ Setting up periodic modal check...")
+		console.log("⏰ Setting up periodic modal check...")
 		
 		const checkForModals = () => {
 			// Check for buy modals using all selector approaches
@@ -555,7 +556,7 @@
 			selectorTests.forEach(({ name, selector }) => {
 				const buyModals = document.querySelectorAll(selector)
 				if (buyModals.length > 0) {
-					debugLog(`⏰ PERIODIC: Found ${buyModals.length} buy modals via ${name} selector!`, {
+					console.log(`⏰ PERIODIC: Found ${buyModals.length} buy modals via ${name} selector!`, {
 						selector: selector,
 						modals: buyModals
 					})
@@ -574,7 +575,7 @@
 						
 						if (!processedNodes.has(nodeToRemove)) {
 							processedNodes.add(nodeToRemove)
-							debugLog(`⏰ PERIODIC: Removing modal ${index + 1}/${buyModals.length} via ${name} selector`)
+							console.log(`⏰ PERIODIC: Removing modal ${index + 1}/${buyModals.length} via ${name} selector`)
 							nodeToRemove.remove()
 							totalModalsFound++
 						}
@@ -585,13 +586,13 @@
 			// Check for buy buttons
 			const buyButtons = document.querySelectorAll(BuyButtonSelector)
 			if (buyButtons.length > 0) {
-				debugLog("⏰ PERIODIC: Found buy buttons during periodic check!", {
+				console.log("⏰ PERIODIC: Found buy buttons during periodic check!", {
 					count: buyButtons.length,
 					buttons: buyButtons
 				})
 				
 				buyButtons.forEach((button, index) => {
-					debugLog(`⏰ PERIODIC: Removing buy button ${index + 1}/${buyButtons.length}`)
+					console.log(`⏰ PERIODIC: Removing buy button ${index + 1}/${buyButtons.length}`)
 					button.remove()
 				})
 			}
@@ -612,7 +613,7 @@
 										element.querySelector('input[placeholder*="email"]')
 				
 				if (hasUpgradeContent) {
-					debugLog("⏰ PERIODIC: Found modal with upgrade content during periodic check!", {
+					console.log("⏰ PERIODIC: Found modal with upgrade content during periodic check!", {
 						element: element,
 						selector: element.getAttribute('data-element-id'),
 						textContent: element.textContent?.substring(0, 100)
@@ -629,13 +630,13 @@
 		// Also check immediately
 		setTimeout(checkForModals, 1000)
 		
-		debugLog("⏰ Periodic modal check active (every 2 seconds)")
+		console.log("⏰ Periodic modal check active (every 2 seconds)")
 		
 		return intervalId
 	}
 
 	// Start periodic check
-	const periodicCheckInterval = setupPeriodicModalCheck()
+	// const periodicCheckInterval = setupPeriodicModalCheck()
 
 	// #endregion Periodic Modal Check
 
@@ -688,31 +689,7 @@
 			callback()
 		}, settleTime)
 	}
-	var LogMutations = false
 	
-	// #region ---[ Debug Control ]---
-	/**
-	 * Debug control - set to false to disable debug logging
-	 * You can also run this in the browser console: window.MODAL_DEBUG = false
-	 */
-	window.MODAL_DEBUG = true
-	
-	const debugLog = (message, ...args) => {
-		if (window.MODAL_DEBUG) {
-			console.log(message, ...args)
-		}
-	}
-	
-	// Helper to easily disable all modal debugging from console
-	window.disableModalDebug = () => {
-		window.MODAL_DEBUG = false
-		console.log("Modal debugging disabled. Run 'window.MODAL_DEBUG = true' to re-enable.")
-	}
-	
-	window.enableModalDebug = () => {
-		window.MODAL_DEBUG = true
-		console.log("Modal debugging enabled. Run 'window.disableModalDebug()' to disable.")
-	}
 	
 	console.log("🎛️ Modal Debug Control: Run 'window.disableModalDebug()' in console to disable debug logging")
 	// #endregion Debug Control

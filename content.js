@@ -27,6 +27,24 @@
 		a[href*="https://buy.typingmind.com"], 
 		 > div > form > div > input[placeholder="Enter your email"]
 	)`
+	
+	// Alternative selector versions for testing different approaches
+	// Version 1: Looser hierarchy - doesn't require direct children, just descendants
+	const BuyModalSelectorLoose = `div[data-element-id=pop-up-modal]
+	:has(
+		a[href*="https://buy.typingmind.com"], 
+		input[placeholder="Enter your email"]
+	)`
+	
+	// Version 2: Select the child elements directly instead of the modal container
+	const BuyModalChildSelectors = [
+		'div[data-element-id=pop-up-modal] a[href*="https://buy.typingmind.com"]',
+		'div[data-element-id=pop-up-modal] input[placeholder="Enter your email"]'
+	]
+	
+	// Combined selector for child-based approach
+	const BuyModalChildSelector = BuyModalChildSelectors.join(', ')
+	
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
 	const SaveJsonButtonId = "save-json-button"
@@ -246,6 +264,10 @@
 
 	// --- Main Logic ---
 	console.log("Extension: Content script loaded and observing DOM.")
+	console.log("🎯 Modal Selectors Initialized:")
+	console.log("  Original (strict hierarchy):", BuyModalSelector)
+	console.log("  Loose hierarchy:", BuyModalSelectorLoose) 
+	console.log("  Child-based:", BuyModalChildSelector)
 
 	// #region ---[ Modal Debug Observer ]---
 	/**
@@ -287,16 +309,32 @@
 								})
 							}
 							
-							// Also check child elements for modals
-							const childModals = node.querySelectorAll && node.querySelectorAll(BuyModalSelector)
-							if (childModals && childModals.length > 0) {
-								debugLog("🚨 DEBUG: Modal found in child elements!", {
-									type: "childModal",
-									parent: node,
-									modals: childModals,
-									mutation: mutation
+							// Test all three selector approaches
+							const testAllSelectors = (node) => {
+								const results = {
+									original: node.querySelectorAll && node.querySelectorAll(BuyModalSelector),
+									loose: node.querySelectorAll && node.querySelectorAll(BuyModalSelectorLoose),
+									childBased: node.querySelectorAll && node.querySelectorAll(BuyModalChildSelector)
+								}
+								
+								let foundAny = false
+								Object.entries(results).forEach(([selectorType, matches]) => {
+									if (matches && matches.length > 0) {
+										foundAny = true
+										debugLog(`🚨 DEBUG: Modal found via ${selectorType} selector!`, {
+											type: "childModal",
+											selectorType: selectorType,
+											parent: node,
+											modals: matches,
+											mutation: mutation
+										})
+									}
 								})
+								
+								return foundAny
 							}
+							
+							testAllSelectors(node)
 						}
 					}
 				}
@@ -504,19 +542,45 @@
 		debugLog("⏰ Setting up periodic modal check...")
 		
 		const checkForModals = () => {
-			// Check for buy modals
-			const buyModals = document.querySelectorAll(BuyModalSelector)
-			if (buyModals.length > 0) {
-				debugLog("⏰ PERIODIC: Found buy modals during periodic check!", {
-					count: buyModals.length,
-					modals: buyModals
-				})
-				
-				buyModals.forEach((modal, index) => {
-					debugLog(`⏰ PERIODIC: Removing buy modal ${index + 1}/${buyModals.length}`)
-					modal.remove()
-				})
-			}
+			// Check for buy modals using all selector approaches
+			const selectorTests = [
+				{ name: "original", selector: BuyModalSelector },
+				{ name: "loose", selector: BuyModalSelectorLoose },
+				{ name: "child", selector: BuyModalChildSelector }
+			]
+			
+			let totalModalsFound = 0
+			const processedNodes = new Set()
+			
+			selectorTests.forEach(({ name, selector }) => {
+				const buyModals = document.querySelectorAll(selector)
+				if (buyModals.length > 0) {
+					debugLog(`⏰ PERIODIC: Found ${buyModals.length} buy modals via ${name} selector!`, {
+						selector: selector,
+						modals: buyModals
+					})
+					
+					buyModals.forEach((modal, index) => {
+						// Avoid duplicate removals
+						let nodeToRemove = modal
+						
+						// For child-based selector, find the modal container
+						if (name === "child") {
+							const modalContainer = modal.closest('div[data-element-id=pop-up-modal]')
+							if (modalContainer) {
+								nodeToRemove = modalContainer
+							}
+						}
+						
+						if (!processedNodes.has(nodeToRemove)) {
+							processedNodes.add(nodeToRemove)
+							debugLog(`⏰ PERIODIC: Removing modal ${index + 1}/${buyModals.length} via ${name} selector`)
+							nodeToRemove.remove()
+							totalModalsFound++
+						}
+					})
+				}
+			})
 			
 			// Check for buy buttons
 			const buyButtons = document.querySelectorAll(BuyButtonSelector)
@@ -712,27 +776,77 @@
 				})
 			}
 			
-			// Enhanced buy modal detection
-			;({ matches, anyMatches } = mutatedMatches(mutation, BuyModalSelector))
-			if (anyMatches) {
-				console.log("🎯 MAIN: Buy modal detected via mutatedMatches. Closing it.", { matches })
-				matches.forEach(({ node }) => {
-					if (node && node.remove) {
-						node.remove()
+			// Enhanced buy modal detection - test all selector approaches
+			const testAllModalSelectors = (mutation) => {
+				const selectorTests = [
+					{ name: "original", selector: BuyModalSelector },
+					{ name: "loose", selector: BuyModalSelectorLoose },
+					{ name: "childBased", selector: BuyModalChildSelector }
+				]
+				
+				let totalMatches = []
+				
+				selectorTests.forEach(({ name, selector }) => {
+					const { matches, anyMatches } = mutatedMatches(mutation, selector)
+					if (anyMatches) {
+						console.log(`🎯 MAIN: Buy modal detected via ${name} selector!`, { matches, selector })
+						totalMatches.push(...matches)
 					}
 				})
+				
+				// Remove duplicates and clean up
+				const uniqueNodes = new Set()
+				totalMatches.forEach(({ node }) => {
+					if (node && node.remove && !uniqueNodes.has(node)) {
+						uniqueNodes.add(node)
+						
+						// For child-based selector, we need to find and remove the modal container
+						if (node.closest && node.closest('div[data-element-id=pop-up-modal]')) {
+							const modalContainer = node.closest('div[data-element-id=pop-up-modal]')
+							console.log("🎯 MAIN: Removing modal container found via child selector")
+							modalContainer.remove()
+						} else {
+							node.remove()
+						}
+					}
+				})
+				
+				return totalMatches.length > 0
 			}
+			
+			testAllModalSelectors(mutation)
 			
 			// Additional modal detection methods
 			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
 				for (const addedNode of mutation.addedNodes) {
 					if (addedNode.nodeType === Node.ELEMENT_NODE) {
-						// Check for modals using broader criteria
-						const isBuyModal = addedNode.matches?.(BuyModalSelector) ||
-							(addedNode.querySelector && addedNode.querySelector(BuyModalSelector)) ||
-							(addedNode.textContent && addedNode.textContent.includes('upgrade')) ||
-							(addedNode.querySelector && addedNode.querySelector('a[href*="buy.typingmind.com"]')) ||
-							(addedNode.querySelector && addedNode.querySelector('input[placeholder*="email"]'))
+						// Check for modals using broader criteria with all selector approaches
+						const testAllApproaches = () => {
+							const tests = [
+								{ name: "original-direct", result: addedNode.matches?.(BuyModalSelector) },
+								{ name: "loose-direct", result: addedNode.matches?.(BuyModalSelectorLoose) },
+								{ name: "child-direct", result: addedNode.matches?.(BuyModalChildSelector) },
+								{ name: "original-query", result: addedNode.querySelector && addedNode.querySelector(BuyModalSelector) },
+								{ name: "loose-query", result: addedNode.querySelector && addedNode.querySelector(BuyModalSelectorLoose) },
+								{ name: "child-query", result: addedNode.querySelector && addedNode.querySelector(BuyModalChildSelector) },
+								{ name: "text-upgrade", result: addedNode.textContent && addedNode.textContent.includes('upgrade') },
+								{ name: "link-check", result: addedNode.querySelector && addedNode.querySelector('a[href*="buy.typingmind.com"]') },
+								{ name: "email-input", result: addedNode.querySelector && addedNode.querySelector('input[placeholder*="email"]') }
+							]
+							
+							const positiveTests = tests.filter(test => test.result)
+							if (positiveTests.length > 0) {
+								console.log("🎯 MAIN: Modal detection test results:", {
+									element: addedNode,
+									positiveTests: positiveTests.map(t => t.name),
+									allTests: tests
+								})
+							}
+							
+							return positiveTests.length > 0
+						}
+						
+						const isBuyModal = testAllApproaches()
 						
 						if (isBuyModal) {
 							console.log("🎯 MAIN: Buy modal detected via enhanced detection. Closing it.", { 
@@ -740,25 +854,51 @@
 								textContent: addedNode.textContent?.substring(0, 100)
 							})
 							
-							// Try multiple removal strategies
-							if (addedNode.matches?.(BuyModalSelector)) {
-								addedNode.remove()
-							} else {
-								// Find the actual modal element
-								const modalElement = addedNode.querySelector(BuyModalSelector)
-								if (modalElement) {
-									modalElement.remove()
-								} else {
-									// Fallback: send escape key
-									setTimeout(() => {
-										document.dispatchEvent(new KeyboardEvent("keydown", { 
-											key: "Escape", 
-											keyCode: 27, 
-											bubbles: true 
-										}))
-									}, 25)
+							// Try multiple removal strategies with all selector approaches
+							const removeModal = () => {
+								// Strategy 1: Direct removal if node is a modal
+								if (addedNode.matches?.(BuyModalSelector) || 
+									addedNode.matches?.(BuyModalSelectorLoose)) {
+									console.log("🎯 MAIN: Removing modal directly")
+									addedNode.remove()
+									return true
 								}
+								
+								// Strategy 2: Find modal container and remove it
+								const modalSelectors = [BuyModalSelector, BuyModalSelectorLoose]
+								for (const selector of modalSelectors) {
+									const modalElement = addedNode.querySelector(selector)
+									if (modalElement) {
+										console.log(`🎯 MAIN: Removing modal found via querySelector: ${selector}`)
+										modalElement.remove()
+										return true
+									}
+								}
+								
+								// Strategy 3: Child-based - find child and remove its modal container
+								const childElement = addedNode.querySelector(BuyModalChildSelector)
+								if (childElement) {
+									const modalContainer = childElement.closest('div[data-element-id=pop-up-modal]')
+									if (modalContainer) {
+										console.log("🎯 MAIN: Removing modal container found via child element")
+										modalContainer.remove()
+										return true
+									}
+								}
+								
+								// Strategy 4: Fallback - send escape key
+								console.log("🎯 MAIN: Using escape key fallback")
+								setTimeout(() => {
+									document.dispatchEvent(new KeyboardEvent("keydown", { 
+										key: "Escape", 
+										keyCode: 27, 
+										bubbles: true 
+									}))
+								}, 25)
+								return false
 							}
+							
+							removeModal()
 						}
 					}
 				}
@@ -770,8 +910,16 @@
 				if (target && target.nodeType === Node.ELEMENT_NODE) {
 					// Check if a modal became visible through attribute changes
 					if (mutation.attributeName === 'style' || mutation.attributeName === 'class') {
-						const isBuyModal = target.matches?.(BuyModalSelector) ||
-							(target.querySelector && target.querySelector(BuyModalSelector))
+						const modalTests = [
+							{ name: "original-direct", result: target.matches?.(BuyModalSelector) },
+							{ name: "loose-direct", result: target.matches?.(BuyModalSelectorLoose) },
+							{ name: "original-query", result: target.querySelector && target.querySelector(BuyModalSelector) },
+							{ name: "loose-query", result: target.querySelector && target.querySelector(BuyModalSelectorLoose) },
+							{ name: "child-query", result: target.querySelector && target.querySelector(BuyModalChildSelector) }
+						]
+						
+						const positiveTests = modalTests.filter(test => test.result)
+						const isBuyModal = positiveTests.length > 0
 						
 						if (isBuyModal) {
 							const computedStyle = window.getComputedStyle(target)
@@ -782,15 +930,28 @@
 							if (isVisible) {
 								console.log("🎯 MAIN: Buy modal became visible via attribute change. Closing it.", {
 									element: target,
-									attributeName: mutation.attributeName
+									attributeName: mutation.attributeName,
+									detectedVia: positiveTests.map(t => t.name)
 								})
 								
-								if (target.matches?.(BuyModalSelector)) {
+								// Try all removal approaches
+								if (target.matches?.(BuyModalSelector) || target.matches?.(BuyModalSelectorLoose)) {
 									target.remove()
 								} else {
-									const modalElement = target.querySelector(BuyModalSelector)
+									// Try to find modal via different selectors
+									const modalElement = target.querySelector(BuyModalSelector) || 
+														target.querySelector(BuyModalSelectorLoose)
 									if (modalElement) {
 										modalElement.remove()
+									} else {
+										// Child-based approach
+										const childElement = target.querySelector(BuyModalChildSelector)
+										if (childElement) {
+											const modalContainer = childElement.closest('div[data-element-id=pop-up-modal]')
+											if (modalContainer) {
+												modalContainer.remove()
+											}
+										}
 									}
 								}
 							}

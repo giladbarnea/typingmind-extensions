@@ -30,6 +30,7 @@
 	const BuyButtonSelector = "button#nav-buy-button"
 	const ButtonContainerSelector = 'div[data-element-id="current-chat-title"] > div'
 	const SaveJsonButtonId = "save-json-button"
+	const StopButtonId = "stop-button"
 	const SidebarSelector = 'div[data-element-id="nav-container"]'
 	const isSidebarOpen = () => !document.querySelector(SidebarSelector).matches(".opacity-0")
 	const closeSidebar = () => document.querySelector('button[aria-label="Open sidebar"]').click()
@@ -140,6 +141,25 @@
 		})
 
 		buttonContainer.prepend(saveButton)
+	}
+
+	/**
+	 * Creates the "Stop" button for stopping LLM streaming.
+	 */
+	function addStopButton() {
+		const stopButton = document.createElement("button")
+		stopButton.id = StopButtonId
+		stopButton.className =
+			"w-9 justify-center dark:hover:bg-white/20 dark:active:bg-white/25 dark:disabled:text-neutral-500 hover:bg-slate-900/20 active:bg-slate-900/25 disabled:text-neutral-400 focus-visible:outline-offset-2 focus-visible:outline-slate-500 text-slate-900 dark:text-white inline-flex items-center rounded-lg h-9 transition-all group font-semibold text-xs"
+		stopButton.setAttribute("data-tooltip-id", "global")
+		stopButton.setAttribute("data-tooltip-content", "Stop Generating")
+
+		const stopIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+		stopIcon.setAttribute("class", "w-[18px] h-[18px]")
+		stopIcon.setAttribute("viewBox", "0 0 24 24")
+		stopIcon.setAttribute("fill", "currentColor")
+		stopIcon.innerHTML = `<path d="M5 5h14v14H5z" />`
+		stopButton.appendChild(stopIcon)
 	}
 
 	function saveButtonExists() {
@@ -283,7 +303,52 @@
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function modifyElements(mutations) {
+		/**
+		 * Checks all node-containing properties of MutationRecord and returns ones that match.
+		 * @returns a list of objects, each object is a thin wrapper for a matching node: { node: matchingNode, type: "addedNode" }, { node: matchingNode, type: "target" }, etc
+		 */
+		const mutatedMatches = (mutation, selector) => {
+			const matches = []
+			let anyMatches = false
+			for (const addedNode of mutation.addedNodes || []) {
+				if (addedNode.matches?.(selector)) {
+					matches.push({ node: addedNode, type: "addedNode" })
+					anyMatches = true
+				}
+			}
+			for (const removedNode of mutation.removedNodes || []) {
+				if (removedNode.matches?.(selector)) {
+					matches.push({ node: removedNode, type: "removedNode" })
+					anyMatches = true
+				}
+			}
+			if (mutation.target?.matches?.(selector)) {
+				matches.push({ node: mutation.target, type: "target" })
+				anyMatches = true
+			}
+			if (mutation.nextSibling?.matches?.(selector)) {
+				matches.push({ node: mutation.nextSibling, type: "nextSibling" })
+				anyMatches = true
+			}
+			if (mutation.previousSibling?.matches?.(selector)) {
+				matches.push({ node: mutation.previousSibling, type: "previousSibling" })
+				anyMatches = true
+			}
+			return { matches, anyMatches }
+		}
 		for (const mutation of mutations) {
+			let { matches, anyMatches } = mutatedMatches(mutation, BuyButtonSelector)
+			if (anyMatches) {
+				debugger
+				console.log("Buy button detected. Removing it.")
+				matches.forEach(({ node }) => node.remove())
+			}
+			;({ matches, anyMatches } = mutatedMatches(mutation, BuyModalSelector))
+			if (anyMatches) {
+				debugger
+				console.log("Buy modal detected. Closing it.")
+				matches.forEach(({ node }) => node.remove())
+			}
 			const target = mutation.target
 			if (mutation.type === "childList" && target?.matches?.(ResponseBlockSelector)) {
 				removeHoverClasses(target)

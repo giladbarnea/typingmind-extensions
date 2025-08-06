@@ -182,6 +182,8 @@
 			return !!document.getElementById(SaveJsonButtonId);
 		},
 	};
+	// #endregion Save Chat
+
 
 	const StopButton = {
 		/**
@@ -209,7 +211,7 @@
 			stopIcon.setAttribute("class", "w-[18px] h-[18px]");
 			stopIcon.setAttribute("viewBox", "0 0 24 24");
 			stopIcon.setAttribute("fill", "currentColor");
-			stopIcon.innerHTML = `<path d="M5 5h14v14H5z" />`;
+			stopIcon.innerHTML = `<rect x="5" y="5" width="14" height="14" rx="3" ry="3" />`;
 			stopButton.appendChild(stopIcon);
 
 			buttonContainer.prepend(stopButton);
@@ -219,7 +221,6 @@
 			return !!document.getElementById(StopButtonId);
 		},
 	};
-	// #endregion Save Chat
 
 	// #region ---[ Element Modifications ]---
 	function removeHoverClasses(node) {

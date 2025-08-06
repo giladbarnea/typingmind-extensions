@@ -265,390 +265,6 @@
 
 	// --- Main Logic ---
 	console.log("Extension: Content script loaded and observing DOM.")
-	console.log("🎯 Modal Selectors Initialized:")
-	console.log("  Original (strict hierarchy):", BuyModalSelector)
-	console.log("  Loose hierarchy:", BuyModalSelectorLoose)
-	console.log("  Child-based:", BuyModalChildSelector)
-
-	// #region ---[ Modal Debug Observer ]---
-	/**
-	 * Debug observer to catch modal appearances that the main observer might miss
-	 */
-	function createModalDebugObserver() {
-		console.log("🔍 Setting up debug observer for modal detection...")
-
-		const debugObserver = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				// Log all added nodes
-				if (mutation.addedNodes.length > 0) {
-					for (const node of mutation.addedNodes) {
-						if (node.nodeType === Node.ELEMENT_NODE) {
-							// Check for any modal-like elements
-							const isModal =
-								node.matches &&
-								(node.matches('[data-element-id*="modal"]') ||
-									node.matches('[data-element-id*="pop-up"]') ||
-									node.matches('div[role="dialog"]') ||
-									node.matches('div[aria-modal="true"]') ||
-									node.matches(".modal") ||
-									node.className?.includes?.("modal") ||
-									node.textContent.includes("upgrade") ||
-									node.textContent.includes("buy") ||
-									node.querySelector('a[href*="buy.typingmind.com"]') ||
-									node.querySelector('input[placeholder*="email"]'))
-
-							if (isModal) {
-								console.log("🚨 DEBUG: Potential modal detected!", {
-									type: "addedNode",
-									element: node,
-									selector: node.getAttribute("data-element-id"),
-									className: node.className,
-									textContent: node.textContent?.substring(0, 100),
-									hasUpgradeLink: !!node.querySelector('a[href*="buy.typingmind.com"]'),
-									hasEmailInput: !!node.querySelector('input[placeholder*="email"]'),
-									mutation: mutation,
-								})
-							}
-
-							// Test all three selector approaches
-							const testAllSelectors = (node) => {
-								const results = {
-									original: node.querySelectorAll?.(BuyModalSelector),
-									loose: node.querySelectorAll?.(BuyModalSelectorLoose),
-									childBased: node.querySelectorAll?.(BuyModalChildSelector),
-								}
-
-								let foundAny = false
-								Object.entries(results).forEach(([selectorType, matches]) => {
-									if (matches && matches.length > 0) {
-										foundAny = true
-										console.log(`🚨 DEBUG: Modal found via ${selectorType} selector!`, {
-											type: "childModal",
-											selectorType: selectorType,
-											parent: node,
-											modals: matches,
-											mutation: mutation,
-										})
-									}
-								})
-
-								return foundAny
-							}
-
-							testAllSelectors(node)
-						}
-					}
-				}
-
-				// Log attribute changes that might affect visibility
-				if (mutation.type === "attributes") {
-					const target = mutation.target
-					if (target.nodeType === Node.ELEMENT_NODE) {
-						const isModalRelated =
-							target.matches &&
-							(target.matches('[data-element-id*="modal"]') ||
-								target.matches('[data-element-id*="pop-up"]') ||
-								target.className?.includes?.("modal") ||
-								target.getAttribute("data-element-id") === "pop-up-modal")
-
-						if (isModalRelated) {
-							console.log("🔄 DEBUG: Modal-related attribute change!", {
-								type: "attributeChange",
-								element: target,
-								attributeName: mutation.attributeName,
-								oldValue: mutation.oldValue,
-								newValue: target.getAttribute(mutation.attributeName),
-								mutation: mutation,
-							})
-						}
-
-						// Check for visibility/display changes
-						if (mutation.attributeName === "style" || mutation.attributeName === "class") {
-							const computedStyle = window.getComputedStyle(target)
-							if (
-								computedStyle.display !== "none" &&
-								computedStyle.visibility !== "hidden" &&
-								computedStyle.opacity !== "0"
-							) {
-								// Check if this element or its children contain modal content
-								const containsModalContent =
-									target.textContent.includes("upgrade") ||
-									target.textContent.includes("buy") ||
-									target.querySelector('a[href*="buy.typingmind.com"]') ||
-									target.querySelector('input[placeholder*="email"]')
-
-								if (containsModalContent) {
-									console.log("👁️ DEBUG: Element with modal content became visible!", {
-										type: "visibilityChange",
-										element: target,
-										attributeName: mutation.attributeName,
-										textContent: target.textContent?.substring(0, 100),
-										mutation: mutation,
-									})
-								}
-							}
-						}
-					}
-				}
-			}
-		})
-
-		// Observe with comprehensive settings
-		debugObserver.observe(document.body, {
-			childList: true,
-			subtree: true,
-			attributes: true,
-			attributeOldValue: true,
-			characterData: true,
-			characterDataOldValue: true,
-		})
-
-		console.log("🔍 Debug observer active - will log any modal-related changes")
-
-		return debugObserver
-	}
-
-	// Start debug observer
-	createModalDebugObserver()
-
-	// #endregion Modal Debug Observer
-
-	// #region ---[ Intersection Observer Fallback ]---
-	/**
-	 * Fallback observer using Intersection Observer API to detect modals becoming visible
-	 */
-	function createIntersectionObserverFallback() {
-		console.log("👁️ Setting up Intersection Observer fallback for modal detection...")
-
-		const intersectionObserver = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting && entry.intersectionRatio > 0) {
-						const element = entry.target
-
-						// Check if this is a modal that just became visible
-						const isModal =
-							element.matches &&
-							(element.matches(BuyModalSelector) ||
-								element.matches('[data-element-id*="modal"]') ||
-								element.matches('[data-element-id*="pop-up"]') ||
-								element.matches('div[role="dialog"]') ||
-								element.matches('div[aria-modal="true"]') ||
-								element.className?.includes("modal"))
-
-						const containsModalContent =
-							element.textContent.includes("upgrade") ||
-							element.textContent.includes("buy") ||
-							element.querySelector('a[href*="buy.typingmind.com"]') ||
-							element.querySelector('input[placeholder*="email"]')
-
-						if (isModal || containsModalContent) {
-							console.log("👁️ INTERSECTION: Modal became visible in viewport!", {
-								element: element,
-								selector: element.getAttribute("data-element-id"),
-								className: element.className,
-								textContent: element.textContent?.substring(0, 100),
-								intersectionRatio: entry.intersectionRatio,
-								boundingClientRect: entry.boundingClientRect,
-							})
-
-							// Try to close the modal
-							if (element.matches(BuyModalSelector)) {
-								console.log("🔥 INTERSECTION: Attempting to close detected buy modal...")
-								element.remove()
-							}
-						}
-					}
-				}
-			},
-			{
-				root: null, // viewport
-				rootMargin: "0px",
-				threshold: [0, 0.1, 0.5, 1.0], // Multiple thresholds for better detection
-			},
-		)
-
-		// Observe all existing elements that might be modals
-		const observeExistingModals = () => {
-			const potentialModals = document.querySelectorAll(`
-				[data-element-id*="modal"],
-				[data-element-id*="pop-up"],
-				div[role="dialog"],
-				div[aria-modal="true"],
-				.modal,
-				${BuyModalSelector}
-			`)
-
-			potentialModals.forEach((modal) => {
-				intersectionObserver.observe(modal)
-			})
-
-			console.log(`👁️ INTERSECTION: Observing ${potentialModals.length} existing potential modals`)
-		}
-
-		// Set up a mutation observer specifically to watch for new potential modals to observe
-		const modalWatcher = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				if (mutation.addedNodes.length > 0) {
-					for (const node of mutation.addedNodes) {
-						if (node.nodeType === Node.ELEMENT_NODE) {
-							// Check if this new node is a potential modal
-							const isPotentialModal =
-								node.matches &&
-								(node.matches('[data-element-id*="modal"]') ||
-									node.matches('[data-element-id*="pop-up"]') ||
-									node.matches('div[role="dialog"]') ||
-									node.matches('div[aria-modal="true"]') ||
-									node.matches(".modal") ||
-									node.className?.includes?.("modal"))
-
-							if (isPotentialModal) {
-								console.log("👁️ INTERSECTION: New potential modal detected, adding to observation list")
-								intersectionObserver.observe(node)
-							}
-
-							// Also check for child modals
-							const childModals = node.querySelectorAll?.(`
-							[data-element-id*="modal"],
-							[data-element-id*="pop-up"],
-							div[role="dialog"],
-							div[aria-modal="true"],
-							.modal
-						`)
-
-							if (childModals && childModals.length > 0) {
-								console.log(`👁️ INTERSECTION: Found ${childModals.length} child modals, adding to observation`)
-								childModals.forEach((modal) => intersectionObserver.observe(modal))
-							}
-						}
-					}
-				}
-			}
-		})
-
-		modalWatcher.observe(document.body, {
-			childList: true,
-			subtree: true,
-		})
-
-		// Start observing existing modals
-		observeExistingModals()
-
-		console.log("👁️ Intersection Observer fallback active")
-
-		return { intersectionObserver, modalWatcher }
-	}
-
-	// Start intersection observer fallback
-	// const intersectionFallback = createIntersectionObserverFallback()
-
-	// #endregion Intersection Observer Fallback
-
-	// #region ---[ Periodic Modal Check ]---
-	/**
-	 * Periodic check for modals as a final safety net
-	 */
-	function setupPeriodicModalCheck() {
-		console.log("⏰ Setting up periodic modal check...")
-
-		const checkForModals = () => {
-			// Check for buy modals using all selector approaches
-			const selectorTests = [
-				{ name: "original", selector: BuyModalSelector },
-				{ name: "loose", selector: BuyModalSelectorLoose },
-				{ name: "child", selector: BuyModalChildSelector },
-			]
-
-			let totalModalsFound = 0
-			const processedNodes = new Set()
-
-			selectorTests.forEach(({ name, selector }) => {
-				const buyModals = document.querySelectorAll(selector)
-				if (buyModals.length > 0) {
-					console.log(`⏰ PERIODIC: Found ${buyModals.length} buy modals via ${name} selector!`, {
-						selector: selector,
-						modals: buyModals,
-					})
-
-					buyModals.forEach((modal, index) => {
-						// Avoid duplicate removals
-						let nodeToRemove = modal
-
-						// For child-based selector, find the modal container
-						if (name === "child") {
-							const modalContainer = modal.closest("div[data-element-id=pop-up-modal]")
-							if (modalContainer) {
-								nodeToRemove = modalContainer
-							}
-						}
-
-						if (!processedNodes.has(nodeToRemove)) {
-							processedNodes.add(nodeToRemove)
-							console.log(`⏰ PERIODIC: Removing modal ${index + 1}/${buyModals.length} via ${name} selector`)
-							nodeToRemove.remove()
-							totalModalsFound++
-						}
-					})
-				}
-			})
-
-			// Check for buy buttons
-			const buyButtons = document.querySelectorAll(BuyButtonSelector)
-			if (buyButtons.length > 0) {
-				console.log("⏰ PERIODIC: Found buy buttons during periodic check!", {
-					count: buyButtons.length,
-					buttons: buyButtons,
-				})
-
-				buyButtons.forEach((button, index) => {
-					console.log(`⏰ PERIODIC: Removing buy button ${index + 1}/${buyButtons.length}`)
-					button.remove()
-				})
-			}
-
-			// Check for any other modal-like elements with upgrade/buy content
-			const allModalElements = document.querySelectorAll(`
-				[data-element-id*="modal"],
-				[data-element-id*="pop-up"],
-				div[role="dialog"],
-				div[aria-modal="true"],
-				.modal
-			`)
-
-			allModalElements.forEach((element) => {
-				const hasUpgradeContent =
-					element.textContent.includes("upgrade") ||
-					element.textContent.includes("buy") ||
-					element.querySelector('a[href*="buy.typingmind.com"]') ||
-					element.querySelector('input[placeholder*="email"]')
-
-				if (hasUpgradeContent) {
-					console.log("⏰ PERIODIC: Found modal with upgrade content during periodic check!", {
-						element: element,
-						selector: element.getAttribute("data-element-id"),
-						textContent: element.textContent?.substring(0, 100),
-					})
-
-					element.remove()
-				}
-			})
-		}
-
-		// Check every 2 seconds
-		const intervalId = setInterval(checkForModals, 2000)
-
-		// Also check immediately
-		setTimeout(checkForModals, 1000)
-
-		console.log("⏰ Periodic modal check active (every 2 seconds)")
-
-		return intervalId
-	}
-
-	// Start periodic check
-	// const periodicCheckInterval = setupPeriodicModalCheck()
-
-	// #endregion Periodic Modal Check
 
 	// #region ---[ Body Observer ]---
 
@@ -708,116 +324,36 @@
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function modifyElements(mutations) {
-		/**
-		 * Checks all node-containing properties of MutationRecord and returns ones that match.
-		 * @returns a list of objects, each object is a thin wrapper for a matching node: { node: matchingNode, type: "addedNode" }, { node: matchingNode, type: "target" }, etc
-		 */
-		const mutatedMatches = (mutation, selector) => {
-			const matches = []
-			let anyMatches = false
-			for (const addedNode of mutation.addedNodes || []) {
-				if (addedNode.matches?.(selector)) {
-					matches.push({ node: addedNode, type: "addedNode" })
-					anyMatches = true
-				}
-				// Also check children of added nodes
-				if (addedNode.querySelectorAll) {
-					const childMatches = addedNode.querySelectorAll(selector)
-					for (const childMatch of childMatches) {
-						matches.push({ node: childMatch, type: "addedNodeChild" })
-						anyMatches = true
-					}
-				}
-			}
-			for (const removedNode of mutation.removedNodes || []) {
-				if (removedNode.matches?.(selector)) {
-					matches.push({ node: removedNode, type: "removedNode" })
-					anyMatches = true
-				}
-			}
-			if (mutation.target?.matches?.(selector)) {
-				matches.push({ node: mutation.target, type: "target" })
-				anyMatches = true
-			}
-			if (mutation.nextSibling?.matches?.(selector)) {
-				matches.push({ node: mutation.nextSibling, type: "nextSibling" })
-				anyMatches = true
-			}
-			if (mutation.previousSibling?.matches?.(selector)) {
-				matches.push({ node: mutation.previousSibling, type: "previousSibling" })
-				anyMatches = true
-			}
-			return { matches, anyMatches }
-		}
-
 		for (const mutation of mutations) {
-			// Enhanced buy button detection
-			let { matches, anyMatches } = mutatedMatches(mutation, BuyButtonSelector)
-			if (anyMatches) {
-				console.log("🎯 MAIN: Buy button detected. Removing it.", { matches })
-				matches.forEach(({ node }) => {
-					if (node?.remove) {
-						node.remove()
-					}
-				})
-			}
-
-			// Enhanced buy modal detection - test all selector approaches
-			const testAllModalSelectors = (mutation) => {
-				const selectorTests = [
-					{ name: "original", selector: BuyModalSelector },
-					{ name: "loose", selector: BuyModalSelectorLoose },
-					{ name: "childBased", selector: BuyModalChildSelector },
-				]
-
-				let totalMatches = []
-
-				selectorTests.forEach(({ name, selector }) => {
-					const { matches, anyMatches } = mutatedMatches(mutation, selector)
-					if (anyMatches) {
-						console.log(`🎯 MAIN: Buy modal detected via ${name} selector!`, { matches, selector })
-						totalMatches.push(...matches)
-					}
-				})
-
-				// Remove duplicates and clean up
-				const uniqueNodes = new Set()
-				totalMatches.forEach(({ node }) => {
-					if (node?.remove && !uniqueNodes.has(node)) {
-						uniqueNodes.add(node)
-
-						// For child-based selector, we need to find and remove the modal container
-						if (node.closest?.("div[data-element-id=pop-up-modal]")) {
-							const modalContainer = node.closest("div[data-element-id=pop-up-modal]")
-							console.log("🎯 MAIN: Removing modal container found via child selector")
-							modalContainer.remove()
-						} else {
-							node.remove()
-						}
-					}
-				})
-
-				return totalMatches.length > 0
-			}
-
-			testAllModalSelectors(mutation)
-
 			// Additional modal detection methods
+			// TODO: this DOES capture because uses .querySelector.
 			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
 				for (const addedNode of mutation.addedNodes) {
 					if (addedNode.nodeType === Node.ELEMENT_NODE) {
 						// Check for modals using broader criteria with all selector approaches
 						const testAllApproaches = () => {
 							const tests = [
-								{ name: "original-direct", result: addedNode.matches?.(BuyModalSelector) },
-								{ name: "loose-direct", result: addedNode.matches?.(BuyModalSelectorLoose) },
-								{ name: "child-direct", result: addedNode.matches?.(BuyModalChildSelector) },
-								{ name: "original-query", result: addedNode.querySelector?.(BuyModalSelector) },
-								{ name: "loose-query", result: addedNode.querySelector?.(BuyModalSelectorLoose) },
-								{ name: "child-query", result: addedNode.querySelector?.(BuyModalChildSelector) },
-								{ name: "text-upgrade", result: addedNode.textContent?.includes?.("upgrade") },
-								{ name: "link-check", result: addedNode.querySelector?.(`a[href*="buy.typingmind.com"]`) },
-								{ name: "email-input", result: addedNode.querySelector?.(`input[placeholder*="email"]`) },
+								// { name: "original-direct", result: addedNode.matches?.(BuyModalSelector) },
+								// { name: "loose-direct", result: addedNode.matches?.(BuyModalSelectorLoose) },
+								// { name: "child-direct", result: addedNode.matches?.(BuyModalChildSelector) },
+								// { name: "original-query", result: addedNode.querySelector?.(BuyModalSelector) },
+								// { name: "loose-query", result: addedNode.querySelector?.(BuyModalSelectorLoose) },
+								// { name: "child-query", result: addedNode.querySelector?.(BuyModalChildSelector) },
+								// { name: "text-upgrade", result: addedNode.textContent?.includes?.("upgrade") },
+								// { name: "link-check", result: addedNode.querySelector?.(`a[href*="buy.typingmind.com"]`) },
+								// { name: "email-input", result: addedNode.querySelector?.(`input[placeholder*="email"]`) },
+								{
+									name: "popup-modal-child-has-buy-link",
+									result: addedNode.querySelector?.(
+										"div[data-element-id=pop-up-modal]:has(a[href*='buy.typingmind.com'])",
+									),
+								},
+								{
+									name: "popup-modal-child-has-email-input",
+									result: addedNode.querySelector?.(
+										"div[data-element-id=pop-up-modal]:has(input[placeholder*='email'])",
+									),
+								},
 							]
 
 							const positiveTests = tests.filter((test) => test.result)
@@ -829,121 +365,22 @@
 								})
 							}
 
-							return positiveTests.length > 0
+							return tests.filter((t) => !!t.result)
 						}
 
-						const isBuyModal = testAllApproaches()
+						const matchResults = testAllApproaches()
 
-						if (isBuyModal) {
-							console.log("🎯 MAIN: Buy modal detected via enhanced detection. Closing it.", {
+						if (matchResults.length > 0) {
+							console.log("🎯 MAIN: Buy modal detected via enhanced detection. About to close it...", {
 								element: addedNode,
 								textContent: addedNode.textContent?.substring(0, 100),
 							})
-
-							// Try multiple removal strategies with all selector approaches
-							const removeModal = () => {
-								// Strategy 1: Direct removal if node is a modal
-								if (addedNode.matches?.(BuyModalSelector) || addedNode.matches?.(BuyModalSelectorLoose)) {
-									console.log("🎯 MAIN: Removing modal directly")
-									addedNode.remove()
-									return true
-								}
-
-								// Strategy 2: Find modal container and remove it
-								const modalSelectors = [BuyModalSelector, BuyModalSelectorLoose]
-								for (const selector of modalSelectors) {
-									const modalElement = addedNode.querySelector(selector)
-									if (modalElement) {
-										console.log(`🎯 MAIN: Removing modal found via querySelector: ${selector}`)
-										modalElement.remove()
-										return true
-									}
-								}
-
-								// Strategy 3: Child-based - find child and remove its modal container
-								const childElement = addedNode.querySelector(BuyModalChildSelector)
-								if (childElement) {
-									const modalContainer = childElement.closest("div[data-element-id=pop-up-modal]")
-									if (modalContainer) {
-										console.log("🎯 MAIN: Removing modal container found via child element")
-										modalContainer.remove()
-										return true
-									}
-								}
-
-								// Strategy 4: Fallback - send escape key
-								console.log("🎯 MAIN: Using escape key fallback")
-								setTimeout(() => {
-									document.dispatchEvent(
-										new KeyboardEvent("keydown", {
-											key: "Escape",
-											keyCode: 27,
-											bubbles: true,
-										}),
-									)
-								}, 25)
-								return false
+							debugger
+							// addedNode.remove() // Nuke the root modal provider -> no more modals.
+							for (const match of matchResults) {
+								match.result.parentElement.remove()
 							}
-
-							removeModal()
-						}
-					}
-				}
-			}
-
-			// Handle attribute changes that might show modals
-			if (mutation.type === "attributes") {
-				const target = mutation.target
-				if (target && target.nodeType === Node.ELEMENT_NODE) {
-					// Check if a modal became visible through attribute changes
-					// biome-ignore lint/style/useCollapsedIf: cuz
-					if (mutation.attributeName === "style" || mutation.attributeName === "class") {
-						const modalTests = [
-							{ name: "original-direct", result: target.matches?.(BuyModalSelector) },
-							{ name: "loose-direct", result: target.matches?.(BuyModalSelectorLoose) },
-							{ name: "original-query", result: target.querySelector?.(BuyModalSelector) },
-							{ name: "loose-query", result: target.querySelector?.(BuyModalSelectorLoose) },
-							{ name: "child-query", result: target.querySelector?.(BuyModalChildSelector) },
-						]
-
-						const positiveTests = modalTests.filter((test) => test.result)
-						const isBuyModal = positiveTests.length > 0
-
-						if (isBuyModal) {
-							const computedStyle = window.getComputedStyle(target)
-							const isVisible =
-								computedStyle.display !== "none" &&
-								computedStyle.visibility !== "hidden" &&
-								computedStyle.opacity !== "0"
-
-							if (isVisible) {
-								console.log("🎯 MAIN: Buy modal became visible via attribute change. Closing it.", {
-									element: target,
-									attributeName: mutation.attributeName,
-									detectedVia: positiveTests.map((t) => t.name),
-								})
-
-								// Try all removal approaches
-								if (target.matches?.(BuyModalSelector) || target.matches?.(BuyModalSelectorLoose)) {
-									target.remove()
-								} else {
-									// Try to find modal via different selectors
-									const modalElement =
-										target.querySelector(BuyModalSelector) || target.querySelector(BuyModalSelectorLoose)
-									if (modalElement) {
-										modalElement.remove()
-									} else {
-										// Child-based approach
-										const childElement = target.querySelector(BuyModalChildSelector)
-										if (childElement) {
-											const modalContainer = childElement.closest("div[data-element-id=pop-up-modal]")
-											if (modalContainer) {
-												modalContainer.remove()
-											}
-										}
-									}
-								}
-							}
+							return
 						}
 					}
 				}
@@ -956,20 +393,6 @@
 				removeAvatars(target)
 				improveMessageTypography(target)
 				modifyInputBox()
-			}
-
-			// Enhanced buy button target detection
-			if (target?.matches?.(BuyButtonSelector)) {
-				console.log("🎯 MAIN: Buy button target detected. Removing it.")
-				target.remove()
-			}
-
-			// Legacy modal detection (keeping for backward compatibility)
-			if ([...mutation.addedNodes].some((node) => node.matches?.(BuyModalSelector))) {
-				console.log("🎯 MAIN: Upgrade modal detected via legacy method. Closing it.")
-				setTimeout(() => {
-					document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }))
-				}, 25)
 			}
 		}
 	}

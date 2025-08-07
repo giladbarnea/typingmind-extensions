@@ -184,7 +184,6 @@
 	};
 	// #endregion Save Chat
 
-
 	const StopButton = {
 		/**
 		 * Creates the "Stop" button for stopping LLM streaming.
@@ -216,7 +215,7 @@
 
 			buttonContainer.prepend(stopButton);
 		},
-		
+
 		stopButtonExists() {
 			return !!document.getElementById(StopButtonId);
 		},
@@ -450,7 +449,6 @@
 									textContent: addedNode.textContent?.substring(0, 100),
 								},
 							);
-							debugger;
 							// addedNode.remove() // Nuke the root modal provider -> no more modals.
 							for (const match of matchResults) {
 								match.result.parentElement.remove();

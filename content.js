@@ -11,42 +11,13 @@
 // ==/UserScript==
 
 (() => {
-	// Your code here...
-
 	// --- Configuration ---
-	// const BuyModalSelector = `div[data-element-id=pop-up-modal]
-	// :not(
-	// 	:has(
-	// 		> div > div > div > form > input[data-element-id=plugin-url-input]
-	// 	),
-	// 	:has(
-	// 		> div > div > div > div > div.flex > button:nth-of-type(2)
-	// 	)
-	// )`
-	const BuyModalSelector = `div[data-element-id=pop-up-modal]
-	:has(
-		a[href*="https://buy.typingmind.com"], 
-		 > div > form > div > input[placeholder="Enter your email"]
-	)`;
 
-	// Alternative selector versions for testing different approaches
-	// Version 1: Looser hierarchy - doesn't require direct children, just descendants
-	const BuyModalSelectorLoose = `div[data-element-id=pop-up-modal]
-	:has(
-		a[href*="https://buy.typingmind.com"], 
-		input[placeholder="Enter your email"]
-	)`;
-
-	// Version 2: Select the child elements directly instead of the modal container
-	const BuyModalChildSelectors = [
-		'div[data-element-id=pop-up-modal] a[href*="https://buy.typingmind.com"]',
-		'div[data-element-id=pop-up-modal] input[placeholder="Enter your email"]',
+	const BuyModalSelectors = [
+		"div[data-element-id=pop-up-modal]:has(a[href*='buy.typingmind.com'])",
+		"div[data-element-id=pop-up-modal]:has(input[placeholder*='email'])",
 	];
 
-	// Combined selector for child-based approach
-	const BuyModalChildSelector = BuyModalChildSelectors.join(", ");
-
-	const BuyButtonSelector = "button#nav-buy-button";
 	const ButtonContainerSelector =
 		'div[data-element-id="current-chat-title"] > div';
 	const SaveJsonButtonId = "save-json-button";
@@ -59,6 +30,8 @@
 	const ResponseBlockSelector = "div[data-element-id=response-block]";
 	const UserMessageSelector = "div[data-element-id=user-message]";
 	const AiResponseSelector = "div[data-element-id=ai-response]";
+	const ChatInputTextboxSelector =
+		'textarea[data-element-id="chat-input-textbox"]';
 
 	// #region ---[ Save Chat ]---
 	// --- IndexedDB Configuration ---
@@ -301,12 +274,11 @@
 			).length !== 2;
 		if (alreadyModified) return;
 
-		document
-			.querySelector('div[role="presentation"]')
-			.classList.remove("rounded-xl", "dark:bg-slate-950");
-		document
-			.querySelector('div[role="presentation"]')
-			.classList.add("rounded-3xl");
+		const presentationContainer = document.querySelector(
+			'div[role="presentation"]',
+		);
+		presentationContainer.classList.remove("rounded-xl", "dark:bg-slate-950");
+		presentationContainer.classList.add("rounded-3xl");
 
 		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
 		const [modelSelector, pluginsMenu] = [
@@ -322,6 +294,33 @@
 		newParent.appendChild(modelSelector);
 		newParent.appendChild(pluginsMenu);
 	}
+
+	const InputBox = {
+		_state: {
+			expanded: false,
+			initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to remember it.
+		},
+		get _element() {
+			return document.querySelector(ChatInputTextboxSelector);
+		},
+		initState() {
+			InputBox._state.initialHeight = getComputedStyle(InputBox._element).height;
+		},
+		toggleExpand() {
+			// Give it the height of the chat space middle part, as an approximation of "most of the screen."
+			const chatSpaceMiddlepartHeight = getComputedStyle(
+				document.querySelector('div[data-element-id="chat-space-middle-part"]'),
+			).height;
+			if (InputBox._state.expanded) {
+				InputBox._element.classList.remove("max-h-[500px]");
+				InputBox._element.style.height = InputBox._state.initialHeight;
+			} else {
+				InputBox._element.classList.add("max-h-[500px]");
+				InputBox._element.style.height = `${chatSpaceMiddlepartHeight}`;
+			}
+			InputBox._state.expanded = !InputBox._state.expanded;
+		},
+	};
 
 	// #endregion Element Modifications
 
@@ -400,63 +399,30 @@
 				mutation.addedNodes.length > 0
 			) {
 				for (const addedNode of mutation.addedNodes) {
-					if (addedNode.nodeType === Node.ELEMENT_NODE) {
-						// Check for modals using broader criteria with all selector approaches
-						const testAllApproaches = () => {
-							const tests = [
-								// { name: "original-direct", result: addedNode.matches?.(BuyModalSelector) },
-								// { name: "loose-direct", result: addedNode.matches?.(BuyModalSelectorLoose) },
-								// { name: "child-direct", result: addedNode.matches?.(BuyModalChildSelector) },
-								// { name: "original-query", result: addedNode.querySelector?.(BuyModalSelector) },
-								// { name: "loose-query", result: addedNode.querySelector?.(BuyModalSelectorLoose) },
-								// { name: "child-query", result: addedNode.querySelector?.(BuyModalChildSelector) },
-								// { name: "text-upgrade", result: addedNode.textContent?.includes?.("upgrade") },
-								// { name: "link-check", result: addedNode.querySelector?.(`a[href*="buy.typingmind.com"]`) },
-								// { name: "email-input", result: addedNode.querySelector?.(`input[placeholder*="email"]`) },
-								{
-									name: "popup-modal-child-has-buy-link",
-									result: addedNode.querySelector?.(
-										"div[data-element-id=pop-up-modal]:has(a[href*='buy.typingmind.com'])",
-									),
-								},
-								{
-									name: "popup-modal-child-has-email-input",
-									result: addedNode.querySelector?.(
-										"div[data-element-id=pop-up-modal]:has(input[placeholder*='email'])",
-									),
-								},
-							];
-
-							const positiveTests = tests.filter((test) => test.result);
-							if (positiveTests.length > 0) {
-								console.log("🎯 MAIN: Modal detection test results:", {
-									element: addedNode,
-									positiveTests: positiveTests.map((t) => t.name),
-									allTests: tests,
-								});
-							}
-
-							return tests.filter((t) => !!t.result);
-						};
-
-						const matchResults = testAllApproaches();
-
-						if (matchResults.length > 0) {
-							console.log(
-								"🎯 MAIN: Buy modal detected via enhanced detection. About to close it...",
-								{
-									element: addedNode,
-									textContent: addedNode.textContent?.substring(0, 100),
-								},
-							);
-							// addedNode.remove() // Nuke the root modal provider -> no more modals.
-							for (const match of matchResults) {
-								match.result.parentElement.remove();
-							}
-							removedModal = true;
-							return;
-						}
+					if (addedNode.nodeType !== Node.ELEMENT_NODE) {
+						continue;
 					}
+
+					const buyModals = document.querySelectorAll(
+						BuyModalSelectors.join(", "),
+					);
+
+					if (buyModals.length === 0) {
+						continue;
+					}
+					console.log(
+						"🎯 MAIN: Buy modal detected via enhanced detection. About to close it...",
+						{
+							element: addedNode,
+							textContent: addedNode.textContent?.substring(0, 100),
+						},
+					);
+					// addedNode.remove() // Nuke the root modal provider -> no more modals.
+					for (const modal of buyModals) {
+						modal.parentElement.remove();
+					}
+					removedModal = true;
+					return;
 				}
 			}
 
@@ -568,5 +534,7 @@
 		improveMessageTypography();
 
 		modifyInputBox();
+
+		InputBox.initState();
 	});
 })();

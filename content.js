@@ -460,6 +460,7 @@
 	// #endregion Body Observer
 
 	// #region ---[ CSS ]---
+	/** Google Gemini skin. */
 	function injectCss() {
 		const style = document.createElement("style");
 		style.textContent = `

@@ -49,7 +49,7 @@
 
 	const SaveChat = {
 		_buttonId: "save-chat-button",
-		
+
 		_triggerDownload(filename, data) {
 			const blob = new Blob([data], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
@@ -145,7 +145,7 @@
 	};
 
 	const StopButton = {
-		_buttonId:"stop-button",
+		_buttonId: "stop-button",
 		/**
 		 * Creates the "Stop" button for stopping LLM streaming.
 		 * Not implemented yet.
@@ -202,7 +202,7 @@
 		_userMessageSelector: "div[data-element-id=user-message]",
 		_aiResponseSelector: "div[data-element-id=ai-response]",
 		responseBlockSelector: "div[data-element-id=response-block]",
-		
+
 		removeHoverClasses(node) {
 			if (node) {
 				node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5");
@@ -390,6 +390,35 @@
 		"🎛️ Modal Debug Control: Run 'window.disableModalDebug()' in console to disable debug logging",
 	);
 	// #endregion Debug Control
+	const UniqueSeenAddedNodes = new Map();
+	const UniqueSeenRemovedNodes = new Map();
+
+	function extractBasicNodeInfo(node) {
+		// const outerHtmlWithoutChildren = node.outerHTML.replace(/<[^>]*>/g, "");
+		const nodeCopyWithoutChildren = node.cloneNode(false);
+		const basicAttributes = [
+			"nodeType",
+			"nodeName",
+			"tagName",
+			"id",
+			"data-element-id",
+		];
+		const basicInfo = {};
+		for (const attribute of basicAttributes) {
+			if (node[attribute] !== undefined) {
+				basicInfo[attribute] = node[attribute];
+			} else if (node.getAttribute?.(attribute) !== undefined) {
+				basicInfo[attribute] = node.getAttribute(attribute);
+			}
+		}
+		if (node.classList) {
+			basicInfo.classList = [...node.classList];
+		}
+		return {
+			...basicInfo,
+			outerHTML: nodeCopyWithoutChildren.outerHTML,
+		};
+	}
 
 	/**
 	 * Modifies elements in the DOM.
@@ -398,6 +427,21 @@
 	function modifyElements(mutations) {
 		let removedModal = false;
 		for (const mutation of mutations) {
+			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+				for (const addedNode of mutation.addedNodes) {
+					const basicInfo = extractBasicNodeInfo(addedNode);
+					UniqueSeenAddedNodes.set(JSON.stringify(basicInfo), basicInfo);
+				}
+			} else if (
+				mutation.type === "childList" &&
+				mutation.removedNodes.length > 0
+			) {
+				for (const removedNode of mutation.removedNodes) {
+					const basicInfo = extractBasicNodeInfo(removedNode);
+					UniqueSeenRemovedNodes.set(JSON.stringify(basicInfo), basicInfo);
+				}
+			}
+
 			if (
 				!removedModal &&
 				mutation.type === "childList" &&
@@ -444,12 +488,44 @@
 		}
 	}
 
+	let alreadyLoggedAddedCount = 0;
+	let alreadyLoggedRemovedCount = 0;
+	const alreadyLoggedAddedNodes = new Set();
+	const alreadyLoggedRemovedNodes = new Set();
 	const bodyObserver = new MutationObserver((mutations) => {
 		// Add our custom button when its container appears.
 		SaveChat.addSaveChatButton(); // Assumes function is idempotent.
 		// StopButton.addStopButton(); // Assumes function is idempotent.
 
 		modifyElements(mutations);
+		if (UniqueSeenAddedNodes.size > alreadyLoggedAddedCount) {
+			const toLog = [];
+			for (const uniqueAddedNode of UniqueSeenAddedNodes.values()) {
+				if (!alreadyLoggedAddedNodes.has(uniqueAddedNode)) {
+					alreadyLoggedAddedNodes.add(uniqueAddedNode);
+					toLog.push(uniqueAddedNode);
+				}
+			}
+			console.log(
+				"UniqueSeenAddedNodes",
+				toLog,
+			);
+			alreadyLoggedAddedCount = UniqueSeenAddedNodes.size;
+		}
+		if (UniqueSeenRemovedNodes.size > alreadyLoggedRemovedCount) {
+			const toLog = [];
+			for (const uniqueRemovedNode of UniqueSeenRemovedNodes.values()) {
+				if (!alreadyLoggedRemovedNodes.has(uniqueRemovedNode)) {
+					alreadyLoggedRemovedNodes.add(uniqueRemovedNode);
+					toLog.push(uniqueRemovedNode);
+				}
+			}
+			console.log(
+				"UniqueSeenRemovedNodes",
+				toLog,
+			);
+			alreadyLoggedRemovedCount = UniqueSeenRemovedNodes.size;
+		}
 	});
 	bodyObserver.observe(document.body, {
 		childList: true,
@@ -459,7 +535,6 @@
 	});
 	// #endregion Body Observer
 
-	// #region ---[ CSS ]---
 	/** Google Gemini skin. */
 	function injectCss() {
 		const style = document.createElement("style");
@@ -519,8 +594,6 @@
 		document.head.appendChild(style);
 	}
 
-	// #endregion CSS
-
 	onPageSettled(() => {
 		console.log("The page is now fully loaded and interactive!");
 		injectCss();
@@ -533,8 +606,7 @@
 		ChatMessages.removeAvatarIcons();
 
 		InputBox.initState();
-		
-		InputBox.mergeButtonRows();
 
+		InputBox.mergeButtonRows();
 	});
 })();

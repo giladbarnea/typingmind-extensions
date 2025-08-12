@@ -11,30 +11,14 @@
 // ==/UserScript==
 
 (() => {
-	// --- Configuration ---
-
 	const BuyModalSelectors = [
 		"div[data-element-id=pop-up-modal]:has(a[href*='buy.typingmind.com'])",
 		"div[data-element-id=pop-up-modal]:has(input[placeholder*='email'])",
 	];
 
-	const ButtonContainerSelector =
+	const TopButtonsContainerSelector =
 		'div[data-element-id="current-chat-title"] > div';
-	const SaveJsonButtonId = "save-json-button";
-	const StopButtonId = "stop-button";
-	const SidebarSelector = 'div[data-element-id="nav-container"]';
-	const isSidebarOpen = () =>
-		!document.querySelector(SidebarSelector).matches(".opacity-0");
-	const closeSidebar = () =>
-		document.querySelector('button[aria-label="Open sidebar"]').click();
-	const ResponseBlockSelector = "div[data-element-id=response-block]";
-	const UserMessageSelector = "div[data-element-id=user-message]";
-	const AiResponseSelector = "div[data-element-id=ai-response]";
-	const ChatInputTextboxSelector =
-		'textarea[data-element-id="chat-input-textbox"]';
 
-	// #region ---[ Save Chat ]---
-	// --- IndexedDB Configuration ---
 	const DbName = "keyval-store";
 	const StoreName = "keyval";
 
@@ -64,7 +48,9 @@
 	}
 
 	const SaveChat = {
-		triggerDownload(filename, data) {
+		_buttonId: "save-chat-button",
+		
+		_triggerDownload(filename, data) {
 			const blob = new Blob([data], { type: "application/json" });
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
@@ -79,16 +65,18 @@
 		/**
 		 * Creates and injects the "Save Chat" button into the DOM.
 		 */
-		addSaveButton() {
-			const buttonContainer = document.querySelector(ButtonContainerSelector);
-			if (!buttonContainer || SaveChat.saveButtonExists()) {
+		addSaveChatButton() {
+			const buttonContainer = document.querySelector(
+				TopButtonsContainerSelector,
+			);
+			if (!buttonContainer || SaveChat._saveButtonExists()) {
 				return;
 			}
 
 			console.log('Adding "Save" button.');
 
 			const saveButton = document.createElement("button");
-			saveButton.id = SaveJsonButtonId;
+			saveButton.id = SaveChat._buttonId;
 			saveButton.className =
 				"w-9 justify-center dark:hover:bg-white/20 dark:active:bg-white/25 dark:disabled:text-neutral-500 hover:bg-slate-900/20 active:bg-slate-900/25 disabled:text-neutral-400 focus-visible:outline-offset-2 focus-visible:outline-slate-500 text-slate-900 dark:text-white inline-flex items-center rounded-lg h-9 transition-all group font-semibold text-xs";
 			saveButton.setAttribute("data-tooltip-id", "global");
@@ -141,7 +129,7 @@
 					const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
 					const filename = `${timestamp}-${chatId}.json`;
 
-					triggerDownload(filename, jsonString);
+					SaveChat._triggerDownload(filename, jsonString);
 				} catch (error) {
 					console.error("ERROR: Failed to access IndexedDB.", error);
 					alert("Error accessing IndexedDB. See console for details.");
@@ -151,26 +139,29 @@
 			buttonContainer.prepend(saveButton);
 		},
 
-		saveButtonExists() {
-			return !!document.getElementById(SaveJsonButtonId);
+		_saveButtonExists() {
+			return !!document.getElementById(SaveChat._buttonId);
 		},
 	};
-	// #endregion Save Chat
 
 	const StopButton = {
+		_buttonId:"stop-button",
 		/**
 		 * Creates the "Stop" button for stopping LLM streaming.
+		 * Not implemented yet.
 		 */
 		addStopButton() {
-			const buttonContainer = document.querySelector(ButtonContainerSelector);
-			if (!buttonContainer || StopButton.stopButtonExists()) {
+			const buttonContainer = document.querySelector(
+				TopButtonsContainerSelector,
+			);
+			if (!buttonContainer || StopButton._stopButtonExists()) {
 				return;
 			}
 
 			console.log('Adding "Stop" button.');
 
 			const stopButton = document.createElement("button");
-			stopButton.id = StopButtonId;
+			stopButton.id = StopButton._buttonId;
 			stopButton.className =
 				"w-9 justify-center dark:hover:bg-white/20 dark:active:bg-white/25 dark:disabled:text-neutral-500 hover:bg-slate-900/20 active:bg-slate-900/25 disabled:text-neutral-400 focus-visible:outline-offset-2 focus-visible:outline-slate-500 text-slate-900 dark:text-white inline-flex items-center rounded-lg h-9 transition-all group font-semibold text-xs";
 			stopButton.setAttribute("data-tooltip-id", "global");
@@ -189,91 +180,110 @@
 			buttonContainer.prepend(stopButton);
 		},
 
-		stopButtonExists() {
-			return !!document.getElementById(StopButtonId);
+		_stopButtonExists() {
+			return !!document.getElementById(StopButton._buttonId);
 		},
 	};
 
 	// #region ---[ Element Modifications ]---
-	function removeHoverClasses(node) {
-		if (node) {
-			node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5");
-		} else {
-			document
-				.querySelectorAll(ResponseBlockSelector)
-				.forEach(removeHoverClasses);
-		}
-	}
+	const Sidebar = {
+		_selector: 'div[data-element-id="nav-container"]',
+		_toggleButtonSelector: 'button[aria-label="Open sidebar"]',
+		_isOpen() {
+			return !document.querySelector(Sidebar._selector).matches(".opacity-0");
+		},
+		close() {
+			if (Sidebar._isOpen()) {
+				document.querySelector(Sidebar._toggleButtonSelector).click();
+			}
+		},
+	};
+	const ChatMessages = {
+		_userMessageSelector: "div[data-element-id=user-message]",
+		_aiResponseSelector: "div[data-element-id=ai-response]",
+		responseBlockSelector: "div[data-element-id=response-block]",
+		
+		removeHoverClasses(node) {
+			if (node) {
+				node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5");
+			} else {
+				document
+					.querySelectorAll(ChatMessages.responseBlockSelector)
+					.forEach(ChatMessages.removeHoverClasses);
+			}
+		},
+		makeAlignedAndLessWide(node) {
+			const chatContentContainer = document.querySelector(
+				"div.dynamic-chat-content-container",
+			);
+			if (!chatContentContainer.classList.contains("max-w-3xl", "mx-auto")) {
+				chatContentContainer.classList.add("max-w-3xl", "mx-auto");
+			}
 
-	function makeMessagesAlignedAndLessWide(node) {
-		const chatContentContainer = document.querySelector(
-			"div.dynamic-chat-content-container",
-		);
-		if (!chatContentContainer.classList.contains("max-w-3xl", "mx-auto")) {
-			chatContentContainer.classList.add("max-w-3xl", "mx-auto");
-		}
+			const shrinkUserMessage = (userMsgResponseBlock) => {
+				["ml-auto", "mr-0", "max-w-xl"].forEach((cls) => {
+					if (!userMsgResponseBlock.classList.contains(cls))
+						userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl");
+				});
 
-		const shrinkUserMessage = (userMsgResponseBlock) => {
-			["ml-auto", "mr-0", "max-w-xl"].forEach((cls) => {
-				if (!userMsgResponseBlock.classList.contains(cls))
-					userMsgResponseBlock.classList.add("ml-auto", "mr-0", "max-w-xl");
-			});
+				// Remove the hardcoded max-width style
+				userMsgResponseBlock.style["max-width"] = "";
+			};
+			const shrinkAssistantMessage = (aiMsgResponseBlock) => {
+				// We like mx-auto because it centers the message, so we don't remove it.
+				if (!aiMsgResponseBlock.classList.contains("max-w-xl"))
+					aiMsgResponseBlock.classList.add("max-w-xl");
 
-			// Remove the hardcoded max-width style
-			userMsgResponseBlock.style["max-width"] = "";
-		};
-		const shrinkAssistantMessage = (aiMsgResponseBlock) => {
-			// We like mx-auto because it centers the message, so we don't remove it.
-			if (!aiMsgResponseBlock.classList.contains("max-w-xl"))
-				aiMsgResponseBlock.classList.add("max-w-xl");
-
-			aiMsgResponseBlock.style["max-width"] = "";
-		};
-		if (
-			node?.matches(
-				`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`,
-			)
-		) {
-			shrinkUserMessage(node);
-		} else if (
-			node?.matches(`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`)
-		) {
-			shrinkAssistantMessage(node);
-		} else {
-			document
-				.querySelectorAll(
-					`${ResponseBlockSelector}:has(>div>div>${UserMessageSelector})`,
+				aiMsgResponseBlock.style["max-width"] = "";
+			};
+			if (
+				node?.matches(
+					`${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`,
 				)
-				.forEach(shrinkUserMessage);
-			document
-				.querySelectorAll(
-					`${ResponseBlockSelector}:has(>div>${AiResponseSelector})`,
+			) {
+				shrinkUserMessage(node);
+			} else if (
+				node?.matches(
+					`${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`,
 				)
-				.forEach(shrinkAssistantMessage);
-		}
-	}
-
-	function removeAvatars(node) {
-		(node || document)
-			.querySelectorAll('div[data-element-id="chat-avatar-container"]')
-			.forEach((avatarContainer) => {
-				avatarContainer.remove();
-			});
-	}
-
+			) {
+				shrinkAssistantMessage(node);
+			} else {
+				document
+					.querySelectorAll(
+						`${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`,
+					)
+					.forEach(shrinkUserMessage);
+				document
+					.querySelectorAll(
+						`${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`,
+					)
+					.forEach(shrinkAssistantMessage);
+			}
+		},
+		removeAvatarIcons(node) {
+			(node || document)
+				.querySelectorAll('div[data-element-id="chat-avatar-container"]')
+				.forEach((avatarContainer) => {
+					avatarContainer.remove();
+				});
+		},
+	};
 	const InputBox = {
+		_textboxSelector: 'textarea[data-element-id="chat-input-textbox"]',
 		_state: {
 			expanded: false,
 			initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to remember it.
 		},
 		get _element() {
-			return document.querySelector(ChatInputTextboxSelector);
+			return document.querySelector(InputBox._textboxSelector);
 		},
 		initState() {
 			InputBox._state.initialHeight = getComputedStyle(
 				InputBox._element,
 			).height;
 		},
+		/* Needs a button for this, haven't implemented it yet. */
 		toggleExpand() {
 			// Give it the height of the chat space middle part, as an approximation of "most of the screen."
 			const chatSpaceMiddlepartHeight = getComputedStyle(
@@ -424,20 +434,20 @@
 			const target = mutation.target;
 			if (
 				mutation.type === "childList" &&
-				target?.matches?.(ResponseBlockSelector)
+				target?.matches?.(ChatMessages.responseBlockSelector)
 			) {
-				removeHoverClasses(target);
-				makeMessagesAlignedAndLessWide(target);
-				removeAvatars(target);
-				mergeButtonRows();
+				ChatMessages.removeHoverClasses(target);
+				ChatMessages.makeAlignedAndLessWide(target);
+				ChatMessages.removeAvatarIcons(target);
+				InputBox.mergeButtonRows();
 			}
 		}
 	}
 
 	const bodyObserver = new MutationObserver((mutations) => {
 		// Add our custom button when its container appears.
-		SaveChat.addSaveButton(); // Assumes function is idempotent.
-		StopButton.addStopButton(); // Assumes function is idempotent.
+		SaveChat.addSaveChatButton(); // Assumes function is idempotent.
+		// StopButton.addStopButton(); // Assumes function is idempotent.
 
 		modifyElements(mutations);
 	});
@@ -513,20 +523,17 @@
 	onPageSettled(() => {
 		console.log("The page is now fully loaded and interactive!");
 		injectCss();
-		if (isSidebarOpen()) {
-			closeSidebar();
-		}
+		Sidebar.close();
 
-		document
-			.querySelectorAll(ResponseBlockSelector)
-			.forEach(removeHoverClasses);
+		ChatMessages.removeHoverClasses();
 
-		makeMessagesAlignedAndLessWide();
+		ChatMessages.makeAlignedAndLessWide();
 
-		removeAvatars();
-
-		InputBox.mergeButtonRows();
+		ChatMessages.removeAvatarIcons();
 
 		InputBox.initState();
+		
+		InputBox.mergeButtonRows();
+
 	});
 })();

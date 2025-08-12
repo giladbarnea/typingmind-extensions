@@ -185,7 +185,6 @@
 		},
 	};
 
-	// #region ---[ Element Modifications ]---
 	const Sidebar = {
 		_selector: 'div[data-element-id="nav-container"]',
 		_toggleButtonSelector: 'button[aria-label="Open sidebar"]',
@@ -327,12 +326,10 @@
 		},
 	};
 
-	// #endregion Element Modifications
-
 	// --- Main Logic ---
-	console.log("Extension: Content script loaded and observing DOM.");
+	console.log(" 🚀 Improved UI/UX: Script loaded.");
 
-	// #region ---[ Body Observer ]---
+	// #region ---[ Page Modifications ]---
 
 	/**
 	 * Executes a callback when the page has "settled" down.
@@ -386,14 +383,10 @@
 		}, settleTime);
 	}
 
-	console.log(
-		"🎛️ Modal Debug Control: Run 'window.disableModalDebug()' in console to disable debug logging",
-	);
-	// #endregion Debug Control
-	const UniqueSeenAddedNodes = new Map();
-	const UniqueSeenRemovedNodes = new Map();
+	const debug_UniqueSeenAddedNodes = new Map();
+	const debug_UniqueSeenRemovedNodes = new Map();
 
-	function extractBasicNodeInfo(node) {
+	function _debug_extractBasicNodeInfo(node) {
 		// const outerHtmlWithoutChildren = node.outerHTML.replace(/<[^>]*>/g, "");
 		const nodeCopyWithoutChildren = node.cloneNode(false);
 		const basicAttributes = [
@@ -420,66 +413,64 @@
 		};
 	}
 
+	function _debug_storeUniqueNodes(mutation) {
+		if (mutation.addedNodes?.length > 0) {
+			for (const addedNode of mutation.addedNodes) {
+				const basicInfo = _debug_extractBasicNodeInfo(addedNode);
+				debug_UniqueSeenAddedNodes.set(JSON.stringify(basicInfo), basicInfo);
+			}
+		}
+		if (mutation.removedNodes?.length > 0) {
+			for (const removedNode of mutation.removedNodes) {
+				const basicInfo = _debug_extractBasicNodeInfo(removedNode);
+				debug_UniqueSeenRemovedNodes.set(JSON.stringify(basicInfo), basicInfo);
+			}
+		}
+	}
+	function removeBuyModals(mutation) {
+		if (mutation.addedNodes?.length > 0) {
+			for (const addedNode of mutation.addedNodes) {
+				if (addedNode.nodeType !== Node.ELEMENT_NODE) {
+					continue;
+				}
+
+				const buyModals = document.querySelectorAll(
+					BuyModalSelectors.join(", "),
+				);
+
+				if (buyModals.length === 0) {
+					continue;
+				}
+				console.log(
+					"🎯 MAIN: Buy modal detected via enhanced detection. About to close it...",
+					{
+						element: addedNode,
+						textContent: addedNode.textContent?.substring(0, 100),
+					},
+				);
+				// addedNode.remove() // Nuke the root modal provider -> no more modals in general.
+				for (const modal of buyModals) {
+					modal.parentElement.remove();
+				}
+				return true;
+			}
+		}
+		return false;
+	}
 	/**
-	 * Modifies elements in the DOM.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
-	function modifyElements(mutations) {
+	function improveChatUsability(mutations) {
 		let removedModal = false;
 		for (const mutation of mutations) {
-			if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-				for (const addedNode of mutation.addedNodes) {
-					const basicInfo = extractBasicNodeInfo(addedNode);
-					UniqueSeenAddedNodes.set(JSON.stringify(basicInfo), basicInfo);
-				}
-			} else if (
-				mutation.type === "childList" &&
-				mutation.removedNodes.length > 0
-			) {
-				for (const removedNode of mutation.removedNodes) {
-					const basicInfo = extractBasicNodeInfo(removedNode);
-					UniqueSeenRemovedNodes.set(JSON.stringify(basicInfo), basicInfo);
-				}
-			}
-
-			if (
-				!removedModal &&
-				mutation.type === "childList" &&
-				mutation.addedNodes.length > 0
-			) {
-				for (const addedNode of mutation.addedNodes) {
-					if (addedNode.nodeType !== Node.ELEMENT_NODE) {
-						continue;
-					}
-
-					const buyModals = document.querySelectorAll(
-						BuyModalSelectors.join(", "),
-					);
-
-					if (buyModals.length === 0) {
-						continue;
-					}
-					console.log(
-						"🎯 MAIN: Buy modal detected via enhanced detection. About to close it...",
-						{
-							element: addedNode,
-							textContent: addedNode.textContent?.substring(0, 100),
-						},
-					);
-					// addedNode.remove() // Nuke the root modal provider -> no more modals.
-					for (const modal of buyModals) {
-						modal.parentElement.remove();
-					}
-					removedModal = true;
-					return;
-				}
+			if (mutation.type !== "childList") continue;
+			_debug_storeUniqueNodes(mutation);
+			if (!removedModal) {
+				removedModal = removeBuyModals(mutation);
 			}
 
 			const target = mutation.target;
-			if (
-				mutation.type === "childList" &&
-				target?.matches?.(ChatMessages.responseBlockSelector)
-			) {
+			if (target?.matches?.(ChatMessages.responseBlockSelector)) {
 				ChatMessages.removeHoverClasses(target);
 				ChatMessages.makeAlignedAndLessWide(target);
 				ChatMessages.removeAvatarIcons(target);
@@ -487,53 +478,40 @@
 			}
 		}
 	}
-
-	let alreadyLoggedAddedCount = 0;
-	let alreadyLoggedRemovedCount = 0;
-	const alreadyLoggedAddedNodes = new Set();
-	const alreadyLoggedRemovedNodes = new Set();
-	const bodyObserver = new MutationObserver((mutations) => {
-		// Add our custom button when its container appears.
-		SaveChat.addSaveChatButton(); // Assumes function is idempotent.
-		// StopButton.addStopButton(); // Assumes function is idempotent.
-
-		modifyElements(mutations);
-		if (UniqueSeenAddedNodes.size > alreadyLoggedAddedCount) {
-			const toLog = [];
-			for (const uniqueAddedNode of UniqueSeenAddedNodes.values()) {
-				if (!alreadyLoggedAddedNodes.has(uniqueAddedNode)) {
-					alreadyLoggedAddedNodes.add(uniqueAddedNode);
-					toLog.push(uniqueAddedNode);
+	const PageState = {
+		sideBarOpen: false,
+		inChat: false,
+		inferFromMutationsInplace(mutations, { onEnterChat, onSidebarOpen }) {
+			for (const mutation of mutations) {
+				for (const addedNode of mutation.addedNodes) {
+					if (
+						addedNode.getAttribute?.("data-element-id") === "selected-chat-item"
+					) {
+						console.assert(
+							!PageState.sideBarOpen,
+							"Saw selected-chat-item but sideBarOpen was already true",
+						);
+						PageState.sideBarOpen = true;
+						PageState.inChat = false;
+						onEnterChat?.(mutation);
+						break;
+					} else if (
+						addedNode.getAttribute?.("data-element-id") ===
+						"chat-space-background"
+					) {
+						console.assert(
+							!PageState.inChat,
+							"Saw chat-space-background but inChat was already true",
+						);
+						PageState.sideBarOpen = false;
+						PageState.inChat = true;
+						onSidebarOpen?.(mutation);
+						break;
+					}
 				}
 			}
-			console.log(
-				"UniqueSeenAddedNodes",
-				toLog,
-			);
-			alreadyLoggedAddedCount = UniqueSeenAddedNodes.size;
-		}
-		if (UniqueSeenRemovedNodes.size > alreadyLoggedRemovedCount) {
-			const toLog = [];
-			for (const uniqueRemovedNode of UniqueSeenRemovedNodes.values()) {
-				if (!alreadyLoggedRemovedNodes.has(uniqueRemovedNode)) {
-					alreadyLoggedRemovedNodes.add(uniqueRemovedNode);
-					toLog.push(uniqueRemovedNode);
-				}
-			}
-			console.log(
-				"UniqueSeenRemovedNodes",
-				toLog,
-			);
-			alreadyLoggedRemovedCount = UniqueSeenRemovedNodes.size;
-		}
-	});
-	bodyObserver.observe(document.body, {
-		childList: true,
-		subtree: true,
-		attributes: true,
-		characterData: true,
-	});
-	// #endregion Body Observer
+		},
+	};
 
 	/** Google Gemini skin. */
 	function injectCss() {
@@ -598,6 +576,54 @@
 		console.log("The page is now fully loaded and interactive!");
 		injectCss();
 		Sidebar.close();
+
+		let alreadyLoggedAddedCount = 0;
+		let alreadyLoggedRemovedCount = 0;
+		const alreadyLoggedAddedNodes = new Set();
+		const alreadyLoggedRemovedNodes = new Set();
+		const bodyObserver = new MutationObserver((mutations) => {
+			PageState.inferFromMutationsInplace(mutations, {
+				onEnterChat: () => {
+					console.log("🎯 MAIN: Entering chat.");
+					SaveChat.addSaveChatButton();
+					// StopButton.addStopButton();
+				},
+				onSidebarOpen: () => {
+					console.log("🎯 MAIN: Sidebar open.");
+				},
+			});
+
+			improveChatUsability(mutations);
+			if (debug_UniqueSeenAddedNodes.size > alreadyLoggedAddedCount) {
+				const toLog = [];
+				for (const uniqueAddedNode of debug_UniqueSeenAddedNodes.values()) {
+					if (!alreadyLoggedAddedNodes.has(uniqueAddedNode)) {
+						alreadyLoggedAddedNodes.add(uniqueAddedNode);
+						toLog.push(uniqueAddedNode);
+					}
+				}
+				console.log("UniqueSeenAddedNodes", toLog);
+				alreadyLoggedAddedCount = debug_UniqueSeenAddedNodes.size;
+			}
+			if (debug_UniqueSeenRemovedNodes.size > alreadyLoggedRemovedCount) {
+				const toLog = [];
+				for (const uniqueRemovedNode of debug_UniqueSeenRemovedNodes.values()) {
+					if (!alreadyLoggedRemovedNodes.has(uniqueRemovedNode)) {
+						alreadyLoggedRemovedNodes.add(uniqueRemovedNode);
+						toLog.push(uniqueRemovedNode);
+					}
+				}
+				console.log("UniqueSeenRemovedNodes", toLog);
+				alreadyLoggedRemovedCount = debug_UniqueSeenRemovedNodes.size;
+			}
+		});
+		bodyObserver.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			characterData: true,
+		});
+		// #endregion Body Observer
 
 		ChatMessages.removeHoverClasses();
 

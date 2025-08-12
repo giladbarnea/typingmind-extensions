@@ -273,7 +273,7 @@
 		_state: {
 			expanded: false,
 		},
-		_initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to remember it.
+		_initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to store it.
 		_expandedHeight: undefined,
 		get _element() {
 			return document.querySelector(InputBox._textboxSelector);
@@ -466,6 +466,7 @@
 		return false;
 	}
 	/**
+	 * Must be called only when inChat is true.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function improveChatUsability(mutations) {
@@ -482,41 +483,144 @@
 				ChatMessages.removeHoverClasses(target);
 				ChatMessages.makeAlignedAndLessWide(target);
 				ChatMessages.removeAvatarIcons(target);
-				InputBox.mergeButtonRows();
 			}
 		}
 	}
 	const PageState = {
 		sideBarOpen: false,
 		inChat: false,
+		_inChatDataIds: new Set([
+			// "chat-folder",
+			// "chat-space-background",
+			// "chat-space-beginning-part",
+			// "current-chat-title",
+			// "chat-space-middle-part",
+			// "chat-date-info",
+			// "chat-space-end-part",
+			// "chat-input-textbox-container",
+			// "chat-input-actions"
+		]),
+		_sidebarOpenDataIds: new Set([
+			// "chat-folder",
+			"custom-chat-item",
+			"selected-chat-item",
+			// "chat-space-background",
+			// "chat-space-beginning-part",
+			// "current-chat-title",
+			// "chat-space-middle-part",
+			// "chat-date-info",
+			// "chat-space-end-part",
+			// "chat-input-textbox-container",
+			// "chat-input-actions"
+		]),
+		inferFromDom() {
+			PageState.sideBarOpen = !!document.querySelector(
+				'div[data-element-id="selected-chat-item"]',
+			);
+
+			// Probable bug: not having an open sidebar doesn't mean we're in chat. This is likely true when Settings are open, for example.
+			// Fix by copying inferFromMutationsInplace logic.
+			PageState.inChat =
+				document.querySelector('div[data-element-id="selected-chat-item"]') ==
+					null &&
+				document.querySelector('[data-element-id="nav-handler"]') == null &&
+				document.querySelector('[data-element-id="custom-chat-item"]') == null;
+
+			return {
+				sideBarOpen: PageState.sideBarOpen,
+				inChat: PageState.inChat,
+			};
+		},
 		inferFromMutationsInplace(mutations, { onEnterChat, onSidebarOpen }) {
-			for (const mutation of mutations) {
-				for (const addedNode of mutation.addedNodes) {
-					if (
-						addedNode.getAttribute?.("data-element-id") === "selected-chat-item"
-					) {
-						console.assert(
-							!PageState.sideBarOpen,
-							"Saw selected-chat-item but sideBarOpen was already true",
-						);
-						PageState.sideBarOpen = true;
-						PageState.inChat = false;
-						onEnterChat?.();
-						break;
-					} else if (
-						addedNode.getAttribute?.("data-element-id") ===
-						"chat-space-background"
-					) {
-						console.assert(
-							!PageState.inChat,
-							"Saw chat-space-background but inChat was already true",
-						);
-						PageState.sideBarOpen = false;
-						PageState.inChat = true;
-						onSidebarOpen?.();
-						break;
-					}
+			const allAddedNodes = [];
+			const allAttributeMutatedNodes = [];
+			mutations.forEach((m) => {
+				allAddedNodes.push(...m.addedNodes);
+				if (m.type === "attributes") {
+					allAttributeMutatedNodes.push({
+						target: m.target,
+						attribute: m.attributeName,
+						dataElementId: m.target.getAttribute?.("data-element-id"),
+						attributes: new Map(
+							[...m.target.attributes].map((attr) => [
+								attr.name,
+								m.target.getAttribute(attr.name),
+							]),
+						),
+					});
 				}
+			});
+
+			const openedSidebar =
+				allAddedNodes.filter(
+					(addedNode) =>
+						addedNode.getAttribute?.("data-element-id") ===
+							"selected-chat-item" ||
+						addedNode.getAttribute?.("data-element-id") === "custom-chat-item",
+				).length === 2 ||
+				allAttributeMutatedNodes.some((attrMutatedNode) => {
+					if (
+						attrMutatedNode.target.getAttribute?.("data-element-id") ===
+						"nav-container"
+					) {
+						return (
+							attrMutatedNode.attribute === "class" &&
+							!attrMutatedNode.attributes
+								.get("class")
+								?.includes("translate-x-[-100%] opacity-0")
+						);
+					}
+					return false;
+				});
+			// also data-element-id=main-content-adea class changes to:
+			// "flex flex-1 flex-col transition-all duration-300 md:pb-0 md:pl-[--current-sidebar-width]"
+
+			// nav-container 'class' changes. when opening sidebar, it's:
+			// z-[60] transition duration-300 fixed w-full pb-[--workspace-height] md:pb-0 bottom-0 left-0 md:w-[--sidebar-width] bottom-0 top-0
+
+			// nav-handler 'class' changes. when opening sidebar, it's "z-[60] transition duration-300 fixed w-full pb-[--workspace-height] md:pb-0 bottom-0 left-0 md:w-[--sidebar-width] bottom-0 top-0".
+			if (openedSidebar) {
+				console.log(`🎯 Sidebar was just opened (mutation).`);
+				console.assert(
+					!PageState.sideBarOpen,
+					"Saw selected-chat-item but sideBarOpen was already true",
+				);
+				PageState.sideBarOpen = true;
+				PageState.inChat = false;
+				onSidebarOpen?.();
+				return;
+			}
+
+			const enteredChat =
+				allAddedNodes.some(
+					(addedNode) =>
+						// only attributes are interesting, not existence.
+						addedNode.getAttribute?.("data-element-id") ===
+							"chat-input-textbox" ||
+						!addedNode.getAttribute?.("data-element-id") === "nav-handler",
+				) ||
+				// This is true only when COMING BACK to a chat from sidebar
+				allAttributeMutatedNodes.some((attrMutatedNode) => {
+					if (
+						attrMutatedNode.target.getAttribute?.("data-element-id") ===
+						"nav-container"
+					) {
+						return (
+							attrMutatedNode.attribute === "class" &&
+							attrMutatedNode.attributes
+								.get("class")
+								?.includes("translate-x-[-100%] opacity-0")
+						);
+					}
+					return false;
+				});
+
+			if (enteredChat) {
+				console.log(`🎯 Entering chat (mutation).`);
+				PageState.sideBarOpen = false;
+				PageState.inChat = true;
+				onEnterChat?.();
+				return;
 			}
 		},
 	};
@@ -585,6 +689,17 @@
 		injectCss();
 		Sidebar.close();
 
+		// Note the race condition between this block and the body observer callback.
+		if (PageState.inferFromDom().inChat) {
+			console.log("🎯 In chat.");
+			SaveChat.addSaveChatButton();
+			// StopButton.addStopButton();
+			ChatMessages.removeHoverClasses();
+			ChatMessages.makeAlignedAndLessWide();
+			ChatMessages.removeAvatarIcons();
+			InputBox.mergeButtonRows();
+		}
+
 		let alreadyLoggedAddedCount = 0;
 		let alreadyLoggedRemovedCount = 0;
 		const alreadyLoggedAddedNodes = new Set();
@@ -592,13 +707,10 @@
 		const bodyObserver = new MutationObserver((mutations) => {
 			PageState.inferFromMutationsInplace(mutations, {
 				onEnterChat: () => {
-					console.log("🎯 MAIN: Entering chat.");
 					SaveChat.addSaveChatButton();
 					// StopButton.addStopButton();
 					improveChatUsability(mutations);
-				},
-				onSidebarOpen: () => {
-					console.log("🎯 MAIN: Sidebar open.");
+					InputBox.mergeButtonRows();
 				},
 			});
 
@@ -631,14 +743,5 @@
 			attributes: true,
 			characterData: true,
 		});
-		// #endregion Body Observer
-
-		ChatMessages.removeHoverClasses();
-
-		ChatMessages.makeAlignedAndLessWide();
-
-		ChatMessages.removeAvatarIcons();
-
-		InputBox.mergeButtonRows();
 	});
 })();

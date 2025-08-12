@@ -261,34 +261,6 @@
 			});
 	}
 
-	function modifyInputBox() {
-		const alreadyModified =
-			document.querySelectorAll(
-				'[data-element-id="chat-input-actions"]>div>button',
-			).length !== 2;
-		if (alreadyModified) return;
-
-		const presentationContainer = document.querySelector(
-			'div[role="presentation"]',
-		);
-		presentationContainer.classList.remove("rounded-xl", "dark:bg-slate-950");
-		presentationContainer.classList.add("rounded-3xl");
-
-		// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
-		const [modelSelector, pluginsMenu] = [
-			...document
-				.querySelector('[data-element-id="chat-space-end-part"]')
-				.parentElement.querySelectorAll("button"),
-		].slice(0, 2);
-		const newParent = document.querySelector(
-			'[data-element-id="chat-input-actions"]>div',
-		);
-		modelSelector.querySelectorAll("svg").forEach((svg) => svg.remove());
-		pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove());
-		newParent.appendChild(modelSelector);
-		newParent.appendChild(pluginsMenu);
-	}
-
 	const InputBox = {
 		_state: {
 			expanded: false,
@@ -298,7 +270,9 @@
 			return document.querySelector(ChatInputTextboxSelector);
 		},
 		initState() {
-			InputBox._state.initialHeight = getComputedStyle(InputBox._element).height;
+			InputBox._state.initialHeight = getComputedStyle(
+				InputBox._element,
+			).height;
 		},
 		toggleExpand() {
 			// Give it the height of the chat space middle part, as an approximation of "most of the screen."
@@ -313,6 +287,33 @@
 				InputBox._element.style.height = `${chatSpaceMiddlepartHeight}`;
 			}
 			InputBox._state.expanded = !InputBox._state.expanded;
+		},
+		mergeButtonRows() {
+			const alreadyMerged =
+				document.querySelectorAll(
+					'[data-element-id="chat-input-actions"]>div>button',
+				).length !== 2;
+			if (alreadyMerged) return;
+
+			const presentationContainer = document.querySelector(
+				'div[role="presentation"]',
+			);
+			presentationContainer.classList.remove("rounded-xl", "dark:bg-slate-950");
+			presentationContainer.classList.add("rounded-3xl");
+
+			// Cut&Paste model and plugin menus under #chat-input-actions>div.justify-start
+			const [modelSelector, pluginsMenu] = [
+				...document
+					.querySelector('[data-element-id="chat-space-end-part"]')
+					.parentElement.querySelectorAll("button"),
+			].slice(0, 2);
+			const newParent = document.querySelector(
+				'[data-element-id="chat-input-actions"]>div',
+			);
+			modelSelector.querySelectorAll("svg").forEach((svg) => svg.remove());
+			pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove());
+			newParent.appendChild(modelSelector);
+			newParent.appendChild(pluginsMenu);
 		},
 	};
 
@@ -428,7 +429,7 @@
 				removeHoverClasses(target);
 				makeMessagesAlignedAndLessWide(target);
 				removeAvatars(target);
-				modifyInputBox();
+				mergeButtonRows();
 			}
 		}
 	}
@@ -524,7 +525,7 @@
 
 		removeAvatars();
 
-		modifyInputBox();
+		InputBox.mergeButtonRows();
 
 		InputBox.initState();
 	});

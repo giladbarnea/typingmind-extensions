@@ -272,31 +272,39 @@
 		_textboxSelector: 'textarea[data-element-id="chat-input-textbox"]',
 		_state: {
 			expanded: false,
-			initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to remember it.
 		},
+		_initialHeight: undefined, // For some reason, on app launch, the box element has a hardcoded height. Not a class. So we need to remember it.
+		_expandedHeight: undefined,
 		get _element() {
 			return document.querySelector(InputBox._textboxSelector);
 		},
-		initState() {
-			InputBox._state.initialHeight = getComputedStyle(
-				InputBox._element,
-			).height;
-		},
-		/* Needs a button for this, haven't implemented it yet. */
-		toggleExpand() {
+		_initState() {
+			if (InputBox._initialHeight !== undefined) {
+				return;
+			}
+			InputBox._initialHeight = getComputedStyle(InputBox._element).height;
+
 			// Give it the height of the chat space middle part, as an approximation of "most of the screen."
-			const chatSpaceMiddlepartHeight = getComputedStyle(
+			InputBox._expandedHeight = getComputedStyle(
 				document.querySelector('div[data-element-id="chat-space-middle-part"]'),
 			).height;
+		},
+
+		/* Needs a button for this, haven't implemented it yet. */
+		toggleExpand() {
+			InputBox._initState();
+
 			if (InputBox._state.expanded) {
 				InputBox._element.classList.remove("max-h-[500px]");
-				InputBox._element.style.height = InputBox._state.initialHeight;
+				InputBox._element.style.height = InputBox._initialHeight;
+				InputBox._state.expanded = false;
 			} else {
 				InputBox._element.classList.add("max-h-[500px]");
-				InputBox._element.style.height = `${chatSpaceMiddlepartHeight}`;
+				InputBox._element.style.height = InputBox._expandedHeight;
+				InputBox._state.expanded = true;
 			}
-			InputBox._state.expanded = !InputBox._state.expanded;
 		},
+
 		mergeButtonRows() {
 			const alreadyMerged =
 				document.querySelectorAll(
@@ -493,7 +501,7 @@
 						);
 						PageState.sideBarOpen = true;
 						PageState.inChat = false;
-						onEnterChat?.(mutation);
+						onEnterChat?.();
 						break;
 					} else if (
 						addedNode.getAttribute?.("data-element-id") ===
@@ -505,7 +513,7 @@
 						);
 						PageState.sideBarOpen = false;
 						PageState.inChat = true;
-						onSidebarOpen?.(mutation);
+						onSidebarOpen?.();
 						break;
 					}
 				}
@@ -587,13 +595,13 @@
 					console.log("🎯 MAIN: Entering chat.");
 					SaveChat.addSaveChatButton();
 					// StopButton.addStopButton();
+					improveChatUsability(mutations);
 				},
 				onSidebarOpen: () => {
 					console.log("🎯 MAIN: Sidebar open.");
 				},
 			});
 
-			improveChatUsability(mutations);
 			if (debug_UniqueSeenAddedNodes.size > alreadyLoggedAddedCount) {
 				const toLog = [];
 				for (const uniqueAddedNode of debug_UniqueSeenAddedNodes.values()) {
@@ -630,8 +638,6 @@
 		ChatMessages.makeAlignedAndLessWide();
 
 		ChatMessages.removeAvatarIcons();
-
-		InputBox.initState();
 
 		InputBox.mergeButtonRows();
 	});

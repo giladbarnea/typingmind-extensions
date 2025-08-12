@@ -1,9 +1,9 @@
 /** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: because */
 // ==UserScript==
-// @name         Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
+// @name         Typingmind: Improved UI/UX
 // @namespace    http://tampermonkey.net/
 // @version      2025-08-01
-// @description  Typingmind: Save Chat, Remove Buy Modal/Button, Better Fonts
+// @description  Typingmind: Improved UI/UX
 // @author       You
 // @match        https://www.typingmind.com/*
 // @icon         https://www.typingmind.com/favicon-192x192.png
@@ -253,12 +253,6 @@
 		}
 	}
 
-	function improveMessageTypography(node) {
-		// (node||document).querySelectorAll(`${UserMessageSelector}, ${AiResponseSelector}`).forEach((message) => {
-		// message.classList.remove("text-sm")
-		// })
-	}
-
 	function removeAvatars(node) {
 		(node || document)
 			.querySelectorAll('div[data-element-id="chat-avatar-container"]')
@@ -434,7 +428,6 @@
 				removeHoverClasses(target);
 				makeMessagesAlignedAndLessWide(target);
 				removeAvatars(target);
-				improveMessageTypography(target);
 				modifyInputBox();
 			}
 		}
@@ -530,8 +523,6 @@
 		makeMessagesAlignedAndLessWide();
 
 		removeAvatars();
-
-		improveMessageTypography();
 
 		modifyInputBox();
 

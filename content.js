@@ -295,11 +295,11 @@
 			InputBox._initState();
 
 			if (InputBox._state.expanded) {
-				InputBox._element.classList.remove("max-h-[500px]");
+				InputBox._element.classList.add("max-h-[500px]");
 				InputBox._element.style.height = InputBox._initialHeight;
 				InputBox._state.expanded = false;
 			} else {
-				InputBox._element.classList.add("max-h-[500px]");
+				InputBox._element.classList.remove("max-h-[500px]");
 				InputBox._element.style.height = InputBox._expandedHeight;
 				InputBox._state.expanded = true;
 			}

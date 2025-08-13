@@ -41,7 +41,7 @@ def _format_message(msg):
     """
     if isinstance(msg["content"], str):
         block: str = msg["content"]
-        lines = [line.strip() for line in block.splitlines() if line.strip()]
+        lines = [line.rstrip() for line in block.splitlines() if line.strip()]
         if not lines:
             return ""
         if len(lines) > 1:
@@ -56,7 +56,7 @@ def _format_message(msg):
         match block_type:
             case "text":
                 lines = [
-                    line.strip()
+                    line.rstrip()
                     for line in block.get("text", "").splitlines()
                     if line.strip()
                 ]

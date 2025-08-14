@@ -259,14 +259,7 @@
 					)
 					.forEach(shrinkAssistantMessage);
 			}
-		},
-		removeAvatarIcons(node) {
-			(node || document)
-				.querySelectorAll('div[data-element-id="chat-avatar-container"]')
-				.forEach((avatarContainer) => {
-					avatarContainer.remove();
-				});
-		},
+		}
 	};
 	const InputBox = {
 		_textboxSelector: 'textarea[data-element-id="chat-input-textbox"]',
@@ -482,7 +475,6 @@
 			if (target?.matches?.(ChatMessages.responseBlockSelector)) {
 				ChatMessages.removeHoverClasses(target);
 				ChatMessages.makeAlignedAndLessWide(target);
-				ChatMessages.removeAvatarIcons(target);
 			}
 		}
 	}
@@ -656,6 +648,9 @@
   .dark\:bg-\[--main-dark-color\]:is(.dark *) {
 	background-color: #1B1C1D;
   }
+  div[data-element-id="chat-avatar-container"] {
+  	display: none;
+  }
   div[data-element-id="sidebar-middle-part"]{
     background-color: #282A2C;
     color: rgb(211, 227, 253);
@@ -696,7 +691,6 @@
 			// StopButton.addStopButton();
 			ChatMessages.removeHoverClasses();
 			ChatMessages.makeAlignedAndLessWide();
-			ChatMessages.removeAvatarIcons();
 			InputBox.mergeButtonRows();
 		}
 
@@ -705,6 +699,8 @@
 		const alreadyLoggedAddedNodes = new Set();
 		const alreadyLoggedRemovedNodes = new Set();
 		const bodyObserver = new MutationObserver((mutations) => {
+			bodyObserver.disconnect();
+
 			PageState.inferFromMutationsInplace(mutations, {
 				onEnterChat: () => {
 					SaveChat.addSaveChatButton();
@@ -736,6 +732,13 @@
 				console.log("UniqueSeenRemovedNodes", toLog);
 				alreadyLoggedRemovedCount = debug_UniqueSeenRemovedNodes.size;
 			}
+
+			bodyObserver.observe(document.body, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				characterData: true,
+			});
 		});
 		bodyObserver.observe(document.body, {
 			childList: true,

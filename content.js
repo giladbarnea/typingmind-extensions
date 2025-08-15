@@ -11,11 +11,6 @@
 // ==/UserScript==
 
 (() => {
-	const BuyModalSelectors = [
-		"div[data-element-id=pop-up-modal]:has(a[href*='buy.typingmind.com'])",
-		"div[data-element-id=pop-up-modal]:has(input[placeholder*='email'])",
-	];
-
 	const TopButtonsContainerSelector =
 		'div[data-element-id="current-chat-title"] > div';
 
@@ -428,48 +423,14 @@
 			}
 		}
 	}
-	function removeBuyModals(mutation) {
-		if (mutation.addedNodes?.length > 0) {
-			for (const addedNode of mutation.addedNodes) {
-				if (addedNode.nodeType !== Node.ELEMENT_NODE) {
-					continue;
-				}
-
-				const buyModals = document.querySelectorAll(
-					BuyModalSelectors.join(", "),
-				);
-
-				if (buyModals.length === 0) {
-					continue;
-				}
-				console.log(
-					"🎯 MAIN: Buy modal detected via enhanced detection. About to close it...",
-					{
-						element: addedNode,
-						textContent: addedNode.textContent?.substring(0, 100),
-					},
-				);
-				// addedNode.remove() // Nuke the root modal provider -> no more modals in general.
-				for (const modal of buyModals) {
-					modal.parentElement.remove();
-				}
-				return true;
-			}
-		}
-		return false;
-	}
 	/**
 	 * Must be called only when inChat is true.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function improveChatUsability(mutations) {
-		let removedModal = false;
 		for (const mutation of mutations) {
 			if (mutation.type !== "childList") continue;
 			_debug_storeUniqueNodes(mutation);
-			if (!removedModal) {
-				removedModal = removeBuyModals(mutation);
-			}
 
 			const target = mutation.target;
 			if (target?.matches?.(ChatMessages.responseBlockSelector)) {

@@ -40,7 +40,7 @@
 				id: messageId,
 				type: type,
 				element: messageElement,
-				content: this.extractMessageContent(messageElement),
+				content: this._extractMessageContent(messageElement),
 				timestamp: new Date(),
 				processed: false
 			};
@@ -53,8 +53,8 @@
 				timestamp: messageData.timestamp
 			});
 
-			// Trigger message processing
-			this.processMessage(messageData);
+					// Trigger message processing
+		this._processMessage(messageData);
 			
 			return messageId;
 		}
@@ -64,7 +64,7 @@
 		 * @param {Element} element - The message element
 		 * @returns {string} - Cleaned message content
 		 */
-		extractMessageContent(element) {
+		_extractMessageContent(element) {
 			// Clone the element to avoid modifying the original
 			const clone = element.cloneNode(true);
 			
@@ -79,7 +79,7 @@
 		 * Processes a registered message
 		 * @param {Object} messageData - The message data object
 		 */
-		processMessage(messageData) {
+		_processMessage(messageData) {
 			if (messageData.processed) return;
 
 			// Custom processing logic can be added here
@@ -158,11 +158,11 @@
 					continue;
 				}
 
-				// Extract current content using same method as MessageRegistry
-				const currentContent = this.extractMessageContent(messageData.element);
+							// Extract current content using same method as MessageRegistry
+			const currentContent = this._extractMessageContent(messageData.element);
 				
-				// CONSERVATIVE: Only flag if content is significantly different
-				if (this.isSignificantChange(messageData.originalContent, currentContent)) {
+							// CONSERVATIVE: Only flag if content is significantly different
+			if (this._isSignificantChange(messageData.originalContent, currentContent)) {
 					const detection = {
 						messageId: messageId,
 						originalContent: messageData.originalContent,
@@ -187,8 +187,8 @@
 					messageData.originalContent = currentContent;
 					messageData.lastChecked = currentTime;
 
-					// Dispatch debug event
-					this.dispatchChangeEvent(detection);
+									// Dispatch debug event
+				this._dispatchChangeEvent(detection);
 				}
 			}
 		}
@@ -199,7 +199,7 @@
 		 * @param {string} current - Current content
 		 * @returns {boolean} - True if change is significant
 		 */
-		isSignificantChange(original, current) {
+		_isSignificantChange(original, current) {
 			// Skip if either is empty (likely still loading)
 			if (!original.trim() || !current.trim()) {
 				return false;
@@ -223,7 +223,7 @@
 		/**
 		 * Extracts content same way as MessageRegistry
 		 */
-		extractMessageContent(element) {
+		_extractMessageContent(element) {
 			const clone = element.cloneNode(true);
 			const elementsToRemove = clone.querySelectorAll('button, .metadata, .timestamp, [class*="copy"], [class*="edit"]');
 			elementsToRemove.forEach(el => el.remove());
@@ -259,7 +259,7 @@
 		/**
 		 * Dispatches change detection event
 		 */
-		dispatchChangeEvent(detection) {
+		_dispatchChangeEvent(detection) {
 			const event = new CustomEvent('debug_messageContentChanged', {
 				detail: detection
 			});
@@ -313,11 +313,11 @@
 						continue;
 					}
 
-					// Check if the removed node itself is a tracked element
-					this.checkIfRemovedElementIsTracked(removedNode);
+									// Check if the removed node itself is a tracked element
+				this._checkIfRemovedElementIsTracked(removedNode);
 
-					// CONSERVATIVE: Check if removed node contains any tracked elements
-					this.checkIfRemovedNodeContainsTrackedElements(removedNode);
+									// CONSERVATIVE: Check if removed node contains any tracked elements
+				this._checkIfRemovedNodeContainsTrackedElements(removedNode);
 				}
 			}
 		}
@@ -325,29 +325,29 @@
 		/**
 		 * Checks if a removed element is one we're tracking
 		 */
-		checkIfRemovedElementIsTracked(removedElement) {
-			if (this.trackedElements.has(removedElement)) {
-				const messageData = this.trackedElements.get(removedElement);
-				this.recordRemoval(removedElement, messageData, 'direct_removal');
-			}
+		_checkIfRemovedElementIsTracked(removedElement) {
+					if (this.trackedElements.has(removedElement)) {
+			const messageData = this.trackedElements.get(removedElement);
+			this._recordRemoval(removedElement, messageData, 'direct_removal');
+		}
 		}
 
 		/**
 		 * CONSERVATIVE: Checks if removed node contains tracked elements
 		 */
-		checkIfRemovedNodeContainsTrackedElements(removedNode) {
+		_checkIfRemovedNodeContainsTrackedElements(removedNode) {
 			// Check all tracked elements to see if any are descendants of removed node
 			for (const [trackedElement, messageData] of this.trackedElements.entries()) {
-				if (removedNode.contains(trackedElement)) {
-					this.recordRemoval(trackedElement, messageData, 'ancestor_removal');
-				}
+							if (removedNode.contains(trackedElement)) {
+				this._recordRemoval(trackedElement, messageData, 'ancestor_removal');
+			}
 			}
 		}
 
 		/**
 		 * Records a removal detection
 		 */
-		recordRemoval(element, messageData, removalType) {
+		_recordRemoval(element, messageData, removalType) {
 			const detection = {
 				messageId: messageData.messageId,
 				messageType: messageData.messageType,
@@ -369,14 +369,14 @@
 			// Clean up tracking
 			this.trackedElements.delete(element);
 
-			// Dispatch debug event
-			this.dispatchRemovalEvent(detection);
+					// Dispatch debug event
+		this._dispatchRemovalEvent(detection);
 		}
 
 		/**
 		 * Dispatches removal detection event
 		 */
-		dispatchRemovalEvent(detection) {
+		_dispatchRemovalEvent(detection) {
 			const event = new CustomEvent('debug_messageRemoved', {
 				detail: detection
 			});
@@ -428,10 +428,10 @@
 				return;
 			}
 
-			// Create mutation observer
-			this.observer = new MutationObserver((mutations) => {
-				this.handleMutations(mutations);
-			});
+					// Create mutation observer
+		this.observer = new MutationObserver((mutations) => {
+			this._handleMutations(mutations);
+		});
 
 			// Start observing
 			this.observer.observe(chatContainer, {
@@ -447,8 +447,8 @@
 			// Start debug detectors
 			this.debug_changeDetector.startPeriodicChecking(2000); // Check every 2 seconds
 
-			// Process any existing messages
-			this.processExistingMessages();
+					// Process any existing messages
+		this._processExistingMessages();
 		}
 
 		/**
@@ -467,11 +467,11 @@
 			console.log("🔍 Chat Message Observer: Stopped observing");
 		}
 
-		/**
-		 * Handles DOM mutations
-		 * @param {MutationRecord[]} mutations - Array of mutation records
-		 */
-		handleMutations(mutations) {
+			/**
+	 * Handles DOM mutations
+	 * @param {MutationRecord[]} mutations - Array of mutation records
+	 */
+	_handleMutations(mutations) {
 			// CONSERVATIVE: Check for removed messages first
 			this.debug_removalDetector.checkRemovedNodes(mutations);
 			
@@ -480,34 +480,34 @@
 
 				// Check added nodes for new messages
 				for (const addedNode of mutation.addedNodes) {
-					if (addedNode.nodeType !== Node.ELEMENT_NODE) continue;
-					
-					this.checkForNewMessages(addedNode);
+									if (addedNode.nodeType !== Node.ELEMENT_NODE) continue;
+				
+				this._checkForNewMessages(addedNode);
 				}
 			}
 		}
 
-		/**
-		 * Checks if an element or its children contain new chat messages
-		 * @param {Element} element - Element to check
-		 */
-		checkForNewMessages(element) {
-			// Check if the element itself is a message
-			this.processIfMessage(element);
+			/**
+	 * Checks if an element or its children contain new chat messages
+	 * @param {Element} element - Element to check
+	 */
+	_checkForNewMessages(element) {
+					// Check if the element itself is a message
+		this._processIfMessage(element);
 
-			// Check all descendants for messages
-			const userMessages = element.querySelectorAll(ChatMessageSelectors.userMessage);
-			const aiResponses = element.querySelectorAll(ChatMessageSelectors.aiResponse);
+		// Check all descendants for messages
+		const userMessages = element.querySelectorAll(ChatMessageSelectors.userMessage);
+		const aiResponses = element.querySelectorAll(ChatMessageSelectors.aiResponse);
 
-			userMessages.forEach(msg => this.processIfMessage(msg));
-			aiResponses.forEach(msg => this.processIfMessage(msg));
+		userMessages.forEach(msg => this._processIfMessage(msg));
+		aiResponses.forEach(msg => this._processIfMessage(msg));
 		}
 
-		/**
-		 * Processes an element if it's a chat message
-		 * @param {Element} element - Element to check and process
-		 */
-		processIfMessage(element) {
+			/**
+	 * Processes an element if it's a chat message
+	 * @param {Element} element - Element to check and process
+	 */
+	_processIfMessage(element) {
 			// Skip if already processed
 			if (this.processedElements.has(element)) return;
 
@@ -532,17 +532,17 @@
 			}
 		}
 
-		/**
-		 * Processes any existing messages in the DOM
-		 */
-		processExistingMessages() {
+			/**
+	 * Processes any existing messages in the DOM
+	 */
+	_processExistingMessages() {
 			console.log("🔍 Processing existing messages...");
 			
-			const userMessages = document.querySelectorAll(ChatMessageSelectors.userMessage);
-			const aiResponses = document.querySelectorAll(ChatMessageSelectors.aiResponse);
+					const userMessages = document.querySelectorAll(ChatMessageSelectors.userMessage);
+		const aiResponses = document.querySelectorAll(ChatMessageSelectors.aiResponse);
 
-			userMessages.forEach(msg => this.processIfMessage(msg));
-			aiResponses.forEach(msg => this.processIfMessage(msg));
+		userMessages.forEach(msg => this._processIfMessage(msg));
+		aiResponses.forEach(msg => this._processIfMessage(msg));
 
 			console.log(`🔍 Processed ${userMessages.length} user messages and ${aiResponses.length} AI responses`);
 		}

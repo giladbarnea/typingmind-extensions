@@ -182,17 +182,6 @@
 					};
 
 					this.changeDetections.push(detection);
-
-					console.log("🔍 DEBUG_CHANGE: Content modification detected:", {
-						messageId: messageId,
-						originalLength: messageData.originalContent.length,
-						newLength: currentContent.length,
-						originalPreview:
-							messageData.originalContent.substring(0, 50) + "...",
-						newPreview: currentContent.substring(0, 50) + "...",
-						element: messageData.element,
-					});
-
 					// Update stored content to avoid duplicate detections
 					messageData.originalContent = currentContent;
 					messageData.lastChecked = currentTime;

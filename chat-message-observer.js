@@ -76,9 +76,7 @@
 			);
 			elementsToRemove.forEach((el) => el.remove());
 
-			const rv = clone.textContent?.trim() || "";
-			debugger;
-			return rv;
+			return clone.textContent?.trim() || "";
 		}
 
 		/**
@@ -220,7 +218,7 @@
 			// CONSERVATIVE: Must be different by more than just whitespace
 			const normalizedOriginal = original.replace(/\s+/g, " ").trim();
 			const normalizedCurrent = current.replace(/\s+/g, " ").trim();
-			return normalizedOriginal === normalizedCurrent;
+			return normalizedOriginal !== normalizedCurrent;
 		}
 
 		/**

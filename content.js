@@ -426,9 +426,6 @@
 		}, settleTime);
 	}
 
-	const debug_UniqueSeenAddedNodes = new Map();
-	const debug_UniqueSeenRemovedNodes = new Map();
-
 	function _debug_extractBasicNodeInfo(node) {
 		// const outerHtmlWithoutChildren = node.outerHTML.replace(/<[^>]*>/g, "");
 		const nodeCopyWithoutChildren = node.cloneNode(false);
@@ -456,20 +453,6 @@
 		};
 	}
 
-	function _debug_storeUniqueNodes(mutation) {
-		if (mutation.addedNodes?.length > 0) {
-			for (const addedNode of mutation.addedNodes) {
-				const basicInfo = _debug_extractBasicNodeInfo(addedNode);
-				debug_UniqueSeenAddedNodes.set(JSON.stringify(basicInfo), basicInfo);
-			}
-		}
-		if (mutation.removedNodes?.length > 0) {
-			for (const removedNode of mutation.removedNodes) {
-				const basicInfo = _debug_extractBasicNodeInfo(removedNode);
-				debug_UniqueSeenRemovedNodes.set(JSON.stringify(basicInfo), basicInfo);
-			}
-		}
-	}
 	/**
 	 * Must be called only when inChat is true.
 	 * @param {MutationRecord[]} mutations - The mutations to process.
@@ -487,12 +470,11 @@
 			mutations,
 		);
 		for (const mutation of mutations) {
-			_debug_storeUniqueNodes(mutation);
-
 			const target = mutation.target;
 			if (target?.matches?.(ChatMessages.responseBlockSelector)) {
 				ChatMessages.removeHoverClasses(target);
 				ChatMessages.makeAlignedAndLessWide(target);
+				console.log("[improve-chat-usability] mutation target matched responseBlock.");
 			} else if (target?.matches?.(ChatMessages._aiResponseSelector)) {
 				console.warn(
 					"[improve-chat-usability] mutation target didn't match responseBlock but did match aiResponse.",
@@ -722,10 +704,6 @@
 			InputBox.mergeButtonRows();
 		}
 
-		let alreadyLoggedAddedCount = 0;
-		let alreadyLoggedRemovedCount = 0;
-		const alreadyLoggedAddedNodes = new Set();
-		const alreadyLoggedRemovedNodes = new Set();
 		const bodyObserver = new MutationObserver((mutations) => {
 			bodyObserver.disconnect();
 
@@ -738,29 +716,7 @@
 				},
 			});
 
-			if (debug_UniqueSeenAddedNodes.size > alreadyLoggedAddedCount) {
-				const toLog = [];
-				for (const uniqueAddedNode of debug_UniqueSeenAddedNodes.values()) {
-					if (!alreadyLoggedAddedNodes.has(uniqueAddedNode)) {
-						alreadyLoggedAddedNodes.add(uniqueAddedNode);
-						toLog.push(uniqueAddedNode);
-					}
-				}
-				console.log("[debug] UniqueSeenAddedNodes", toLog);
-				alreadyLoggedAddedCount = debug_UniqueSeenAddedNodes.size;
-			}
-			if (debug_UniqueSeenRemovedNodes.size > alreadyLoggedRemovedCount) {
-				const toLog = [];
-				for (const uniqueRemovedNode of debug_UniqueSeenRemovedNodes.values()) {
-					if (!alreadyLoggedRemovedNodes.has(uniqueRemovedNode)) {
-						alreadyLoggedRemovedNodes.add(uniqueRemovedNode);
-						toLog.push(uniqueRemovedNode);
-					}
-				}
-				console.log("[debug] UniqueSeenRemovedNodes", toLog);
-				alreadyLoggedRemovedCount = debug_UniqueSeenRemovedNodes.size;
-			}
-
+			
 			bodyObserver.observe(document.body, {
 				childList: true,
 				subtree: true,

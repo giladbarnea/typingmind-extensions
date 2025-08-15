@@ -484,15 +484,23 @@
 			)
 				.map(([type, count]) => `${count} ${type}`)
 				.join(", ")}.`,
+			mutations,
 		);
 		for (const mutation of mutations) {
-			if (mutation.type !== "childList") continue;
 			_debug_storeUniqueNodes(mutation);
 
 			const target = mutation.target;
 			if (target?.matches?.(ChatMessages.responseBlockSelector)) {
 				ChatMessages.removeHoverClasses(target);
 				ChatMessages.makeAlignedAndLessWide(target);
+			} else if (target?.matches?.(ChatMessages._aiResponseSelector)) {
+				console.warn(
+					"[improve-chat-usability] mutation target didn't match responseBlock but did match aiResponse.",
+				);
+			} else if (target?.matches?.(ChatMessages._userMessageSelector)) {
+				console.warn(
+					"[improve-chat-usability] mutation target didn't match responseBlock but did match userMessage.",
+				);
 			}
 		}
 		console.groupEnd();

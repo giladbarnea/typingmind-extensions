@@ -76,7 +76,9 @@
 			);
 			elementsToRemove.forEach((el) => el.remove());
 
-			return clone.textContent?.trim() || "";
+			const rv = clone.textContent?.trim() || "";
+			debugger;
+			return rv;
 		}
 
 		/**

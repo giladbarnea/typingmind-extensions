@@ -280,6 +280,26 @@
 		},
 	};
 	const InputBox = {
+		/* Relevant to anywhere in this script where input box selectors are concerned. 
+		I saw this snippet in someone else's script. Would be informative to explore these techniques:
+	    const messageInput = document.querySelector(
+			'[data-element-id="message-input"]',
+		);
+		if (messageInput) {
+			const inputRow = messageInput.querySelector('[data-element-id="input-row"]');
+			if (inputRow) {
+				const wfullDiv = inputRow.querySelector(".w-full");
+				if (wfullDiv) {
+					const chatInputContainer = wfullDiv.querySelector(
+						'[data-element-id="chat-input-textbox-container"]',
+					)?.parentElement;
+					if (chatInputContainer) {
+						wfullDiv.insertBefore(newLabel, chatInputContainer);
+					}
+				}
+			}
+		}
+		*/
 		_textboxSelector: 'textarea[data-element-id="chat-input-textbox"]',
 		_state: {
 			expanded: false,

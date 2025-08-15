@@ -68,7 +68,7 @@
 				return;
 			}
 
-			console.log('Adding "Save" button.');
+			console.log('[save-chat] Adding "Save" button.');
 
 			const saveButton = document.createElement("button");
 			saveButton.id = SaveChat._buttonId;
@@ -93,12 +93,14 @@
 				const url = window.location.href;
 				const match = url.match(/#chat=([^&]+)/);
 				if (!match) {
-					alert("Could not find a chat ID in the URL.");
+					alert(`[save-chat] Could not find a chat ID in the URL: ${url}`);
 					return;
 				}
 				const chatId = match[1];
 
-				console.log(`Attempting to fetch chat "${chatId}" to save it...`);
+				console.log(
+					`[save-chat] Attempting to fetch chat "${chatId}" to save it...`,
+				);
 				try {
 					const value = await getFromIndexedDb(
 						DbName,
@@ -110,7 +112,9 @@
 						return;
 					}
 
-					console.log("SUCCESS: Found value. Triggering download...");
+					console.log(
+						"[save-chat] SUCCESS: Found value. Triggering download...",
+					);
 					const jsonString = JSON.stringify(value, null, 2);
 
 					const now = new Date();
@@ -126,7 +130,10 @@
 
 					SaveChat._triggerDownload(filename, jsonString);
 				} catch (error) {
-					console.error("ERROR: Failed to access IndexedDB.", error);
+					console.error(
+						"[save-chat] ERROR: Failed to access IndexedDB.",
+						error,
+					);
 					alert("Error accessing IndexedDB. See console for details.");
 				}
 			});
@@ -153,7 +160,7 @@
 				return;
 			}
 
-			console.log('Adding "Stop" button.');
+			console.log('[stop-button] Adding "Stop" button.');
 
 			const stopButton = document.createElement("button");
 			stopButton.id = StopButton._buttonId;
@@ -188,6 +195,7 @@
 		},
 		close() {
 			if (Sidebar._isOpen()) {
+				console.log("[sidebar] Closing sidebar.");
 				document.querySelector(Sidebar._toggleButtonSelector).click();
 			}
 		},
@@ -198,6 +206,15 @@
 		responseBlockSelector: "div[data-element-id=response-block]",
 
 		removeHoverClasses(node) {
+			const nodeRepr = node
+				? [`specific node: `, node]
+				: [
+						`all ${
+							[...document.querySelectorAll(ChatMessages.responseBlockSelector)]
+								.length
+						} responseBlockSelector nodes`,
+					];
+			console.log(`[chat-messages] Removing hover classes from `, ...nodeRepr);
 			if (node) {
 				node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5");
 			} else {
@@ -230,29 +247,29 @@
 
 				aiMsgResponseBlock.style["max-width"] = "";
 			};
-			if (
-				node?.matches(
-					`${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`,
-				)
-			) {
+			const fullUserMessageSelector = `${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`;
+			const fullAiMessageSelector = `${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`;
+			if (node?.matches(fullUserMessageSelector)) {
+				console.log(`[chat-messages] Shrinking specific user message:`, node);
 				shrinkUserMessage(node);
-			} else if (
-				node?.matches(
-					`${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`,
-				)
-			) {
+			} else if (node?.matches(fullAiMessageSelector)) {
+				console.log(
+					`[chat-messages] Shrinking specific assistant message:`,
+					node,
+				);
 				shrinkAssistantMessage(node);
 			} else {
-				document
-					.querySelectorAll(
-						`${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`,
-					)
-					.forEach(shrinkUserMessage);
-				document
-					.querySelectorAll(
-						`${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`,
-					)
-					.forEach(shrinkAssistantMessage);
+				const allUserMessages = [
+					...document.querySelectorAll(fullUserMessageSelector),
+				];
+				const allAiMessages = [
+					...document.querySelectorAll(fullAiMessageSelector),
+				];
+				console.log(
+					`[chat-messages] Shrinking all ${allUserMessages.length} user messages and ${allAiMessages.length} assistant messages.`,
+				);
+				allUserMessages.forEach(shrinkUserMessage);
+				allAiMessages.forEach(shrinkAssistantMessage);
 			}
 		},
 	};
@@ -294,6 +311,7 @@
 		},
 
 		mergeButtonRows() {
+			// note: flimsy because will break if any other button is added to the input actions.
 			const alreadyMerged =
 				document.querySelectorAll(
 					'[data-element-id="chat-input-actions"]>div>button',
@@ -319,11 +337,12 @@
 			pluginsMenu.querySelectorAll("svg").forEach((svg) => svg.remove());
 			newParent.appendChild(modelSelector);
 			newParent.appendChild(pluginsMenu);
+			console.log("[input-box] Merged button rows.");
 		},
 	};
 
 	// --- Main Logic ---
-	console.log(" 🚀 Improved UI/UX: Script loaded.");
+	console.log("[main] 🚀 Improved UI/UX: Script loaded.");
 
 	// #region ---[ Page Modifications ]---
 
@@ -350,7 +369,7 @@
 			// And start a new one
 			settleTimer = setTimeout(() => {
 				// If this timer completes, it means no mutations have occurred in `settleTime` ms.
-				console.log("Page has settled. Firing callback.");
+				console.log("[onPageSettled] Page has settled. Firing callback.");
 
 				// We can now disconnect the observer to prevent further checks
 				obs.disconnect();
@@ -373,7 +392,9 @@
 		// We also start the initial timer, in case the page is already static
 		// or loads faster than the observer can be set up.
 		settleTimer = setTimeout(() => {
-			console.log("Initial settle time reached. Firing callback.");
+			console.log(
+				"[onPageSettled] Initial settle time reached. Firing callback.",
+			);
 			observer.disconnect();
 			callback();
 		}, settleTime);
@@ -644,13 +665,13 @@
 	}
 
 	onPageSettled(() => {
-		console.log("The page is now fully loaded and interactive!");
+		console.log("[main] The page is now fully loaded and interactive!");
 		injectCss();
 		Sidebar.close();
 
 		// Note the race condition between this block and the body observer callback.
 		if (PageState.inferFromDom().inChat) {
-			console.log("🎯 In chat.");
+			console.log("[main] 🎯 In chat (inferred from DOM).");
 			SaveChat.addSaveChatButton();
 			// StopButton.addStopButton();
 			ChatMessages.removeHoverClasses();
@@ -682,7 +703,7 @@
 						toLog.push(uniqueAddedNode);
 					}
 				}
-				console.log("UniqueSeenAddedNodes", toLog);
+				console.log("[debug] UniqueSeenAddedNodes", toLog);
 				alreadyLoggedAddedCount = debug_UniqueSeenAddedNodes.size;
 			}
 			if (debug_UniqueSeenRemovedNodes.size > alreadyLoggedRemovedCount) {
@@ -693,7 +714,7 @@
 						toLog.push(uniqueRemovedNode);
 					}
 				}
-				console.log("UniqueSeenRemovedNodes", toLog);
+				console.log("[debug] UniqueSeenRemovedNodes", toLog);
 				alreadyLoggedRemovedCount = debug_UniqueSeenRemovedNodes.size;
 			}
 

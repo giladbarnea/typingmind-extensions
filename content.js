@@ -678,9 +678,7 @@
   div[data-element-id="chat-avatar-container"] {
   	display: none;
   }
-	div[data-element-id="chat-input-actions"] {
-		display: none;
-	}
+	
   div[data-element-id="sidebar-middle-part"]{
     background-color: #282A2C;
     color: rgb(211, 227, 253);

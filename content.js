@@ -214,7 +214,10 @@
 								.length
 						} responseBlockSelector nodes`,
 					];
-			console.log(`[chat-messages] Removing hover classes from `, ...nodeRepr);
+			console.log(
+				`[remove-hover-classes] Removing hover classes from `,
+				...nodeRepr,
+			);
 			if (node) {
 				node.classList.remove("hover:bg-slate-50", "dark:hover:bg-white/5");
 			} else {
@@ -250,11 +253,14 @@
 			const fullUserMessageSelector = `${ChatMessages.responseBlockSelector}:has(>div>div>${ChatMessages._userMessageSelector})`;
 			const fullAiMessageSelector = `${ChatMessages.responseBlockSelector}:has(>div>${ChatMessages._aiResponseSelector})`;
 			if (node?.matches(fullUserMessageSelector)) {
-				console.log(`[chat-messages] Shrinking specific user message:`, node);
+				console.log(
+					`[align-shrink-msgs] Shrinking specific user message:`,
+					node,
+				);
 				shrinkUserMessage(node);
 			} else if (node?.matches(fullAiMessageSelector)) {
 				console.log(
-					`[chat-messages] Shrinking specific assistant message:`,
+					`[align-shrink-msgs] Shrinking specific assistant message:`,
 					node,
 				);
 				shrinkAssistantMessage(node);
@@ -266,7 +272,7 @@
 					...document.querySelectorAll(fullAiMessageSelector),
 				];
 				console.log(
-					`[chat-messages] Shrinking all ${allUserMessages.length} user messages and ${allAiMessages.length} assistant messages.`,
+					`[align-shrink-msgs] Shrinking all ${allUserMessages.length} user messages and ${allAiMessages.length} assistant messages.`,
 				);
 				allUserMessages.forEach(shrinkUserMessage);
 				allAiMessages.forEach(shrinkAssistantMessage);
@@ -449,6 +455,7 @@
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function improveChatUsability(mutations) {
+		console.group("[improve-chat-usability] Processing mutations.");
 		for (const mutation of mutations) {
 			if (mutation.type !== "childList") continue;
 			_debug_storeUniqueNodes(mutation);
@@ -459,6 +466,7 @@
 				ChatMessages.makeAlignedAndLessWide(target);
 			}
 		}
+		console.groupEnd();
 	}
 	const PageState = {
 		sideBarOpen: false,

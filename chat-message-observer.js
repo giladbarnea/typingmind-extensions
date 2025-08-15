@@ -92,34 +92,8 @@
 			// Mark as processed
 			messageData.processed = true;
 
-			// Dispatch custom event for other scripts to listen to
-			const event = new CustomEvent("chatMessageRegistered", {
-				detail: {
-					id: messageData.id,
-					type: messageData.type,
-					content: messageData.content,
-					timestamp: messageData.timestamp,
-				},
-			});
-			document.dispatchEvent(event);
 		}
 
-		/**
-		 * Gets all registered messages
-		 * @returns {Array} - Array of message data objects
-		 */
-		getAllMessages() {
-			return Array.from(this.messages.values());
-		}
-
-		/**
-		 * Gets messages by type
-		 * @param {string} type - Message type ('user' or 'ai')
-		 * @returns {Array} - Array of filtered message data objects
-		 */
-		getMessagesByType(type) {
-			return this.getAllMessages().filter((msg) => msg.type === type);
-		}
 	}
 
 	// --- Debug Classes for Edge Case Detection ---
@@ -185,9 +159,6 @@
 					// Update stored content to avoid duplicate detections
 					messageData.originalContent = currentContent;
 					messageData.lastChecked = currentTime;
-
-					// Dispatch debug event
-					this._dispatchChangeEvent(detection);
 				}
 			}
 		}
@@ -252,22 +223,7 @@
 			}
 		}
 
-		/**
-		 * Dispatches change detection event
-		 */
-		_dispatchChangeEvent(detection) {
-			const event = new CustomEvent("debug_messageContentChanged", {
-				detail: detection,
-			});
-			document.dispatchEvent(event);
-		}
-
-		/**
-		 * Gets all detected changes
-		 */
-		getDetectedChanges() {
-			return [...this.changeDetections];
-		}
+		
 	}
 
 	/**
@@ -363,33 +319,6 @@
 
 			// Clean up tracking
 			this.trackedElements.delete(element);
-
-			// Dispatch debug event
-			this._dispatchRemovalEvent(detection);
-		}
-
-		/**
-		 * Dispatches removal detection event
-		 */
-		_dispatchRemovalEvent(detection) {
-			const event = new CustomEvent("debug_messageRemoved", {
-				detail: detection,
-			});
-			document.dispatchEvent(event);
-		}
-
-		/**
-		 * Gets all detected removals
-		 */
-		getDetectedRemovals() {
-			return [...this.removalDetections];
-		}
-
-		/**
-		 * Gets currently tracked elements count
-		 */
-		getTrackedElementsCount() {
-			return this.trackedElements.size;
 		}
 	}
 
@@ -444,7 +373,7 @@
 			console.log("🔍 Chat Message Observer: Started observing chat container");
 
 			// Start debug detectors
-			this.debug_changeDetector.startPeriodicChecking(5000); // Check every 2 seconds
+			this.debug_changeDetector.startPeriodicChecking(5000);
 
 			// Process any existing messages
 			this._processExistingMessages();
@@ -563,41 +492,6 @@
 				`🔍 Processed ${userMessages.length} user messages and ${aiResponses.length} AI responses`,
 			);
 		}
-
-		/**
-		 * Gets the message registry
-		 * @returns {MessageRegistry} - The message registry instance
-		 */
-		getRegistry() {
-			return this.registry;
-		}
-
-		/**
-		 * CONSERVATIVE DEBUG: Gets debug detection results for analysis
-		 * @returns {Object} - Debug detection data
-		 */
-		getDebugDetections() {
-			return {
-				contentChanges: this.debug_changeDetector.getDetectedChanges(),
-				removals: this.debug_removalDetector.getDetectedRemovals(),
-				trackedElementsCount:
-					this.debug_removalDetector.getTrackedElementsCount(),
-				stats: {
-					totalChanges: this.debug_changeDetector.getDetectedChanges().length,
-					totalRemovals:
-						this.debug_removalDetector.getDetectedRemovals().length,
-					totalMessages: this.registry.getAllMessages().length,
-				},
-			};
-		}
-
-		/**
-		 * CONSERVATIVE DEBUG: Triggers manual content check for immediate analysis
-		 */
-		triggerDebugContentCheck() {
-			console.log("🔍 DEBUG: Manual content check triggered");
-			this.debug_changeDetector.checkForContentChanges();
-		}
 	}
 
 	// --- Page Initialization ---
@@ -670,23 +564,8 @@
 		// Make the observer available globally for debugging/external access
 		window.ChatMessageObserver = chatObserver;
 
-		// CONSERVATIVE DEBUG: Set up event listeners for analysis
-		document.addEventListener("debug_messageContentChanged", (event) => {
-			console.log("🔍 DEBUG EVENT: Content changed:", event.detail);
-		});
-
-		document.addEventListener("debug_messageRemoved", (event) => {
-			console.log("🔍 DEBUG EVENT: Message removed:", event.detail);
-		});
 
 		console.log("🔍 Chat Message Observer: Initialization complete");
-		console.log("🔍 Access via: window.ChatMessageObserver.getRegistry()");
-		console.log(
-			"🔍 DEBUG: Access via: window.ChatMessageObserver.getDebugDetections()",
-		);
-		console.log(
-			"🔍 DEBUG: Manual check via: window.ChatMessageObserver.triggerDebugContentCheck()",
-		);
 	});
 
 	// Cleanup on page unload

@@ -455,7 +455,16 @@
 	 * @param {MutationRecord[]} mutations - The mutations to process.
 	 */
 	function improveChatUsability(mutations) {
-		console.group("[improve-chat-usability] Processing mutations.");
+		console.group(
+			`[improve-chat-usability] Processing ${Object.entries(
+				mutations.reduce((acc, m) => {
+					acc[m.type] = (acc[m.type] || 0) + 1;
+					return acc;
+				}, {}),
+			)
+				.map(([type, count]) => `${count} ${type}`)
+				.join(", ")}.`,
+		);
 		for (const mutation of mutations) {
 			if (mutation.type !== "childList") continue;
 			_debug_storeUniqueNodes(mutation);
@@ -677,7 +686,7 @@
 		injectCss();
 		Sidebar.close();
 
-		// Note the race condition between this block and the body observer callback.
+		// Note the coupling and potential race condition between this block, which is called once on load, and the body observer callback.
 		if (PageState.inferFromDom().inChat) {
 			console.log("[main] 🎯 In chat (inferred from DOM).");
 			SaveChat.addSaveChatButton();

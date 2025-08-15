@@ -29,6 +29,33 @@
 		}
 
 		/**
+		 * IMPROVED: Detects React component attached to element (from expert author pattern)
+		 * @param {Element} element - DOM element
+		 * @returns {Object|null} - React props or null
+		 */
+		getReactProps(element) {
+			const reactKey = Object.keys(element).find(k => k.startsWith("__reactProps$"));
+			return reactKey ? element[reactKey] : null;
+		}
+
+		/**
+		 * IMPROVED: Triggers React onChange if available (from expert author pattern)
+		 * @param {Element} element - Input element
+		 * @param {string} newValue - New value to set
+		 */
+		triggerReactChange(element, newValue) {
+			const reactProps = this.getReactProps(element);
+			if (reactProps?.onChange) {
+				reactProps.onChange({
+					target: { value: newValue },
+					currentTarget: { value: newValue },
+					preventDefault: () => {},
+					stopPropagation: () => {},
+				});
+			}
+		}
+
+		/**
 		 * Registers a new chat message
 		 * @param {Element} messageElement - The DOM element containing the message
 		 * @param {string} type - Type of message ('user' or 'ai')
@@ -60,12 +87,21 @@
 		}
 
 		/**
-		 * Extracts text content from a message element
+		 * IMPROVED: React-aware content extraction (enhanced with expert author pattern)
 		 * @param {Element} element - The message element
 		 * @returns {string} - Cleaned message content
 		 */
 		extractMessageContent(element) {
-			// Clone the element to avoid modifying the original
+			// Try React-aware extraction first (expert author pattern)
+			const reactProps = this.getReactProps(element);
+			if (reactProps?.value || reactProps?.children) {
+				const reactContent = (reactProps.value || reactProps.children)?.toString?.() || '';
+				if (reactContent.trim()) {
+					return reactContent.trim();
+				}
+			}
+			
+			// Fallback to DOM extraction (existing method)
 			const clone = element.cloneNode(true);
 			
 			// Remove any buttons, metadata, or UI elements that aren't part of the actual message
@@ -221,13 +257,31 @@
 		}
 
 		/**
-		 * Extracts content same way as MessageRegistry
+		 * IMPROVED: React-aware content extraction (using expert author pattern)
 		 */
 		extractMessageContent(element) {
+			// Try React-aware extraction first
+			const reactProps = this.getReactProps(element);
+			if (reactProps?.value || reactProps?.children) {
+				const reactContent = (reactProps.value || reactProps.children)?.toString?.() || '';
+				if (reactContent.trim()) {
+					return reactContent.trim();
+				}
+			}
+			
+			// Fallback to DOM extraction
 			const clone = element.cloneNode(true);
 			const elementsToRemove = clone.querySelectorAll('button, .metadata, .timestamp, [class*="copy"], [class*="edit"]');
 			elementsToRemove.forEach(el => el.remove());
 			return clone.textContent?.trim() || '';
+		}
+
+		/**
+		 * React props detection (expert author pattern)
+		 */
+		getReactProps(element) {
+			const reactKey = Object.keys(element).find(k => k.startsWith("__reactProps$"));
+			return reactKey ? element[reactKey] : null;
 		}
 
 		/**
@@ -420,8 +474,8 @@
 				return;
 			}
 
-			// Find the chat container
-			const chatContainer = document.querySelector(ChatMessageSelectors.chatContainer) || document.body;
+			// IMPROVED: Multi-level container detection (expert author pattern)
+			const chatContainer = this.findChatContainer();
 			
 			if (!chatContainer) {
 				console.error("🔍 Chat Message Observer: Could not find chat container");
@@ -488,14 +542,32 @@
 		}
 
 		/**
-		 * Checks if an element or its children contain new chat messages
+		 * IMPROVED: Contextual message detection with expert author pattern
 		 * @param {Element} element - Element to check
 		 */
 		checkForNewMessages(element) {
+			// IMPROVED: Use contextual detection like expert author
+			const responseBlock = element.closest('[data-element-id="response-block"]') || element;
+			
 			// Check if the element itself is a message
 			this.processIfMessage(element);
 
-			// Check all descendants for messages
+			// IMPROVED: Contextual search within response block
+			if (responseBlock !== element) {
+				// Look for messages within the response block context
+				const userMessage = responseBlock.querySelector(ChatMessageSelectors.userMessage);
+				const aiResponse = responseBlock.querySelector(ChatMessageSelectors.aiResponse);
+				
+				if (userMessage && !this.processedElements.has(userMessage)) {
+					this.processIfMessage(userMessage);
+				}
+				
+				if (aiResponse && !this.processedElements.has(aiResponse)) {
+					this.processIfMessage(aiResponse);
+				}
+			}
+
+			// Check all descendants for messages (existing approach as fallback)
 			const userMessages = element.querySelectorAll(ChatMessageSelectors.userMessage);
 			const aiResponses = element.querySelectorAll(ChatMessageSelectors.aiResponse);
 
@@ -548,6 +620,37 @@
 		}
 
 		/**
+		 * IMPROVED: Multi-level chat container detection (expert author pattern)
+		 * @returns {Element} - Chat container element
+		 */
+		findChatContainer() {
+			// Try contextual traversal like expert author
+			const messageInput = document.querySelector('[data-element-id="message-input"]');
+			if (messageInput) {
+				// Look for chat space in the context of message input
+				const chatSpace = messageInput.closest('[data-element-id="chat-space-middle-part"]');
+				if (chatSpace) {
+					return chatSpace;
+				}
+			}
+			
+			// Try original selector
+			const dynamicContainer = document.querySelector(ChatMessageSelectors.chatContainer);
+			if (dynamicContainer) {
+				return dynamicContainer;
+			}
+			
+			// Try finding by response blocks context
+			const responseBlock = document.querySelector('[data-element-id="response-block"]');
+			if (responseBlock) {
+				return responseBlock.closest('.overflow-auto, .overflow-y-auto') || responseBlock.parentElement;
+			}
+			
+			// Fallback to body
+			return document.body;
+		}
+
+		/**
 		 * Gets the message registry
 		 * @returns {MessageRegistry} - The message registry instance
 		 */
@@ -586,9 +689,15 @@
 		const startTime = Date.now();
 		
 		function checkReady() {
+			// IMPROVED: Multi-level readiness check (expert author pattern)
 			const chatContainer = document.querySelector(ChatMessageSelectors.chatContainer);
+			const messageInput = document.querySelector('[data-element-id="message-input"]');
+			const responseBlock = document.querySelector('[data-element-id="response-block"]');
 			
-			if (chatContainer || (Date.now() - startTime > maxWait)) {
+			// Consider ready if we have any of the key elements
+			const isReady = chatContainer || messageInput || responseBlock;
+			
+			if (isReady || (Date.now() - startTime > maxWait)) {
 				callback();
 			} else {
 				setTimeout(checkReady, 100);

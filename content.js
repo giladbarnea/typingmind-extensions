@@ -369,6 +369,7 @@
 			const thinkingButton = document.querySelector(
 				'[data-element-id="toggle-thinking-button"]',
 			);
+			thinkingButton.classList.remove("sm:w-20");
 			const childSpans = thinkingButton.querySelectorAll("span");
 			childSpans.forEach((span) => span.remove());
 		},

@@ -370,9 +370,7 @@
 				'[data-element-id="toggle-thinking-button"]',
 			);
 			const childSpans = thinkingButton.querySelectorAll("span");
-			childSpans.forEach((span) => {
-				span.innerText = "";
-			});
+			childSpans.forEach((span) => span.remove());
 		},
 	};
 

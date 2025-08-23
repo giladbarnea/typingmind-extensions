@@ -522,11 +522,23 @@
 			// "chat-input-textbox-container",
 			// "chat-input-actions"
 		]),
+		inferFromURL() {
+			const href = window.location.href;
+			const inChatFromURL = /#chat=.+$/.test(href);
+			PageState.inChat = inChatFromURL;
+			return inChatFromURL;
+		},
 		inferFromDom() {
+			if (PageState.inferFromURL()) {
+				return {
+					sideBarOpen: PageState.sideBarOpen,
+					inChat: PageState.inChat,
+				};
+			}
 			PageState.sideBarOpen = !!document.querySelector(
 				'div[data-element-id="selected-chat-item"]',
 			);
-
+			
 			// Probable bug: not having an open sidebar doesn't mean we're in chat. This is likely true when Settings are open, for example.
 			// Fix by copying inferFromMutationsInplace logic.
 			PageState.inChat =
@@ -636,8 +648,7 @@
 	
 	// Window hash change: set chat state when URL ends with #chat=...
 	window.onhashchange = () => {
-		const href = window.location.href;
-		PageState.inChat = /#chat=.+$/.test(href);
+		PageState.inferFromURL();
 	};
 
 	/** Google Gemini skin. */

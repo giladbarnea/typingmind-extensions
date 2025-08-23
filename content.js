@@ -687,6 +687,7 @@
 	border-width: 0.5px;
 	box-shadow: 0 2px 8px -2px color(from #a2a9b0 srgb r g b/.16);
 	background-color: inherit;
+	padding: 0 0.4rem;
   }
 	
   #elements-in-action-buttons{

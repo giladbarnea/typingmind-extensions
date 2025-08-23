@@ -365,6 +365,15 @@
 			newParent.appendChild(pluginsMenu);
 			console.log("[input-box] Merged button rows.");
 		},
+		removeTextFromThinkingButton() {
+			const thinkingButton = document.querySelector(
+				'[data-element-id="toggle-thinking-button"]',
+			);
+			const childSpans = thinkingButton.querySelectorAll("span");
+			childSpans.forEach((span) => {
+				span.innerText = "";
+			});
+		},
 	};
 
 	// --- Main Logic ---
@@ -702,26 +711,18 @@
 			ChatMessages.removeHoverClasses();
 			ChatMessages.makeAlignedAndLessWide();
 			InputBox.mergeButtonRows();
+			InputBox.removeTextFromThinkingButton();
 		}
 
 		const bodyObserver = new MutationObserver((mutations) => {
-			bodyObserver.disconnect();
-
 			PageState.inferFromMutationsInplace(mutations, {
 				onEnterChat: () => {
 					SaveChat.addSaveChatButton();
 					// StopButton.addStopButton();
 					improveChatUsability(mutations);
 					InputBox.mergeButtonRows();
+					InputBox.removeTextFromThinkingButton();
 				},
-			});
-
-			
-			bodyObserver.observe(document.body, {
-				childList: true,
-				subtree: true,
-				attributes: true,
-				characterData: true,
 			});
 		});
 		bodyObserver.observe(document.body, {

@@ -637,9 +637,7 @@
 	// Window hash change: set chat state when URL ends with #chat=...
 	window.onhashchange = () => {
 		const href = window.location.href;
-		if (/#chat=.+$/.test(href)) {
-			PageState.inChat = true;
-		}
+		PageState.inChat = /#chat=.+$/.test(href);
 	};
 
 	/** Google Gemini skin. */

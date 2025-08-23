@@ -365,7 +365,7 @@
 			newParent.appendChild(pluginsMenu);
 			console.log("[input-box] Merged button rows.");
 		},
-		removeTextFromThinkingButton() {
+		declutterThinkingButton() {
 			const thinkingButton = document.querySelector(
 				'[data-element-id="toggle-thinking-button"]',
 			);
@@ -711,7 +711,7 @@
 			ChatMessages.removeHoverClasses();
 			ChatMessages.makeAlignedAndLessWide();
 			InputBox.mergeButtonRows();
-			InputBox.removeTextFromThinkingButton();
+			InputBox.declutterThinkingButton();
 		}
 
 		const bodyObserver = new MutationObserver((mutations) => {
@@ -721,7 +721,7 @@
 					// StopButton.addStopButton();
 					improveChatUsability(mutations);
 					InputBox.mergeButtonRows();
-					InputBox.removeTextFromThinkingButton();
+					InputBox.declutterThinkingButton();
 				},
 			});
 		});

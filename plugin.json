@@ -1,0 +1,28 @@
+{
+  "id": "shared_pad",
+  "title": "Shared Pad",
+  "version": 1,
+  "implementationType": "http",
+  "httpAction": {
+    "method": "POST",
+    "url": "https://typingmind-plugin-server-j330.onrender.com/pad",
+    "hasHeaders": true,
+    "requestHeaders": "{\n  \"Content-Type\": \"application/json\"\n}",
+    "hasBody": true,
+    "requestBodyFormat": "json",
+    "requestBody": "{\n  \"action\": \"{action}\",\n  \"text\": \"{text}\",\n  \"chat_id\": \"{CHAT_ID}\"\n}"
+  },
+  "openaiSpec": {
+    "name": "shared_pad",
+    "description": "Read or overwrite a persistent shared plain-text pad.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "enum": ["get", "set"] },
+        "text": { "type": "string", "description": "Used when action is set" }
+      },
+      "required": ["action"]
+    }
+  },
+  "outputType": "respond_to_ai"
+}

@@ -1,4 +1,4 @@
 ---
 alwaysApply: true
 ---
-This repo includes at least one subrepo (plugin-server/). Before you start working, make sure you have the latest version of the subrepo. If you make changes to the subrepo, commit and push those changes to the subrepo, then commit and push the subrepo update in the main repo.
+This repo includes at least one subrepo (tm-shared-pad/). Before you start working, make sure you have the latest version of the subrepo. If you make changes to the subrepo, commit and push those changes to the subrepo, then add, commit and push .gitmodules in the main repo.

@@ -656,6 +656,8 @@
 		const style = document.createElement("style");
 		style.textContent = `
   /* --- Chat Styles --- */
+  @import url('https://raw.githubusercontent.com/mobiledesres/Google-Sans-web-fonts/main/TTF/Google%20Sans%20Display/GoogleSansDisplay-Regular.ttf');
+  @import url('https://github.com/giladbarnea/fonts/raw/refs/heads/main/Google-Sans-Mono-Regular.ttf');
   :root {
 	--main-dark-color: #1B1C1D;
   }
